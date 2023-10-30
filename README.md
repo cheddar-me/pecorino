@@ -65,6 +65,12 @@ b.state #=> Raclette::LeakyBucket::State(full?: false, level: 1.8)
 
 Check out the inline YARD documentation for more options.
 
+## Cleaning out stale locks from the database
+
+We recommend running the following bit of code every couple of hours (via cron or similar) to delete the stale blocks and leaky buckets from the system:
+
+    Raclette.prune!
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
