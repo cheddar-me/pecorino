@@ -1,0 +1,19 @@
+class AddLeakyBucketsTable < ActiveRecord::Migration<%= migration_version %>
+  def change
+    create_table :raclette_leaky_buckets, id: :uuid do |t|
+      t.string :key, null: false
+      t.float :level, null: false
+      t.datetime :last_touched_at, null: false
+      t.datetime :may_be_deleted_after, null: false
+    end
+    add_index :raclette_leaky_buckets, [:key], unique: true
+    add_index :raclette_leaky_buckets, [:may_be_deleted_after]
+
+    create_table :raclette_blocks, id: :uuid do |t|
+      t.string :key, null: false
+      t.datetime :blocked_until, null: false
+    end
+    add_index :raclette_blocks, [:key], unique: true
+    add_index :raclette_blocks, [:blocked_until]
+  end
+end
