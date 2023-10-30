@@ -1,4 +1,4 @@
-class AddLeakyBucketsTable < ActiveRecord::Migration<%= migration_version %>
+class CreateRacletteTables < ActiveRecord::Migration<%= migration_version %>
   def change
     create_table :raclette_leaky_buckets, id: :uuid do |t|
       t.string :key, null: false

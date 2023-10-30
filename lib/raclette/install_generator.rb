@@ -10,7 +10,7 @@ module Raclette
   class InstallGenerator < Rails::Generators::Base
     include ActiveRecord::Generators::Migration
 
-    TEMPLATES = File.join(File.dirname(__FILE__), "templates/install")
+    TEMPLATES = File.join(File.dirname(__FILE__))
     source_paths << TEMPLATES
 
     class_option :database, type: :string, aliases: %i(--db), desc: "The database for your migration. By default, the current environment's primary database is used."
