@@ -54,7 +54,8 @@ throttle.request!(20) # Attempt to withdraw 20 dollars more
 throttle.request!(2) # Attempt to withdraw 2 dollars more, will raise `Throttled` and block withdrawals for 3 hours
 ```
 
-Sometimes you don't want to use a throttle, but you want to track the amount added to the leaky bucket over time. If this is what you need, you can use the `LeakyBucket` class:
+Sometimes you don't want to use a throttle, but you want to track the amount added to the leaky bucket over time. A lower-level abstraction is available for that purpose in the form of the `LeakyBucket` class. It will not raise any exceptions and will not install blocks, but will permit you to track a bucket's state over time:
+
 
 ```ruby
 b = Pecorino::LeakyBucket.new(key: "some_b", capacity: 100, leak_rate: 5)
