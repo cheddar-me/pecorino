@@ -9,7 +9,7 @@ class LeakyBucketTest < ActiveSupport::TestCase
     test "on iteration #{n} accepts a certain number of tokens and returns the new bucket level" do
       slow_test!
 
-      bucket = Raclette::LeakyBucket.new(key: Random.uuid, leak_rate: 1.1, capacity: 15)
+      bucket = Pecorino::LeakyBucket.new(key: Random.uuid, leak_rate: 1.1, capacity: 15)
       assert_in_delta bucket.state.level, 0, 0.0001
 
       state = bucket.fillup(20)
@@ -30,7 +30,7 @@ class LeakyBucketTest < ActiveSupport::TestCase
   test "does not allow a bucket to be created with a negative value" do
     slow_test!
 
-    bucket = Raclette::LeakyBucket.new(key: Random.uuid, leak_rate: 1.1, capacity: 15)
+    bucket = Pecorino::LeakyBucket.new(key: Random.uuid, leak_rate: 1.1, capacity: 15)
     assert_in_delta bucket.state.level, 0, 0.0001
 
     state = bucket.fillup(-10)
@@ -40,7 +40,7 @@ class LeakyBucketTest < ActiveSupport::TestCase
   test "allows check for the bucket leaking out" do
     slow_test!
 
-    bucket = Raclette::LeakyBucket.new(key: Random.uuid, leak_rate: 1.1, capacity: 15)
+    bucket = Pecorino::LeakyBucket.new(key: Random.uuid, leak_rate: 1.1, capacity: 15)
     assert_in_delta bucket.state.level, 0, 0.0001
 
     state = bucket.fillup(10)
@@ -54,7 +54,7 @@ class LeakyBucketTest < ActiveSupport::TestCase
   test "allows the bucket to leak out completely" do
     slow_test!
 
-    bucket = Raclette::LeakyBucket.new(key: Random.uuid, leak_rate: 2, capacity: 1)
+    bucket = Pecorino::LeakyBucket.new(key: Random.uuid, leak_rate: 2, capacity: 1)
     assert_predicate bucket.fillup(1), :full?
 
     sleep(0.25)

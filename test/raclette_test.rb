@@ -2,9 +2,9 @@
 
 require "test_helper"
 
-class RacletteTest < Minitest::Test
+class PecorinoTest < Minitest::Test
   def test_that_it_has_a_version_number
-    refute_nil ::Raclette::VERSION
+    refute_nil ::Pecorino::VERSION
   end
 
   def test_it_does_something_useful

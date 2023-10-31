@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    raclette (0.1.0)
+    pecorino (0.1.0)
       activerecord (~> 7)
       pg
 
@@ -148,7 +148,7 @@ PLATFORMS
 DEPENDENCIES
   activesupport (~> 7)
   minitest (~> 5.0)
-  raclette!
+  pecorino!
   rails (~> 7)
   rake (~> 13.0)
 

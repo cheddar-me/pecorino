@@ -1,24 +1,24 @@
 # frozen_string_literal: true
 
-require_relative "lib/raclette/version"
+require_relative "lib/pecorino/version"
 
 Gem::Specification.new do |spec|
-  spec.name          = "raclette"
-  spec.version       = Raclette::VERSION
+  spec.name          = "pecorino"
+  spec.version       = Pecorino::VERSION
   spec.authors       = ["Julik Tarkhanov"]
   spec.email         = ["me@julik.nl"]
 
   spec.summary       = "Database-based rate limiter using leaky buckets"
-  spec.description   = "Raclette allows you to define throttles and rate meters for your metered resources, all through your standard DB"
-  spec.homepage      = "https://github.com/cheddar-me/raclette"
+  spec.description   = "Pecorino allows you to define throttles and rate meters for your metered resources, all through your standard DB"
+  spec.homepage      = "https://github.com/cheddar-me/pecorino"
   spec.license       = "MIT"
   spec.required_ruby_version = ">= 2.4.0"
 
   # spec.metadata["allowed_push_host"] = "TODO: Set to 'https://mygemserver.com'"
 
   spec.metadata["homepage_uri"] = spec.homepage
-  spec.metadata["source_code_uri"] = "https://github.com/cheddar-me/raclette"
-  spec.metadata["changelog_uri"] = "https://github.com/cheddar-me/raclette/CHANGELOG.md"
+  spec.metadata["source_code_uri"] = "https://github.com/cheddar-me/pecorino"
+  spec.metadata["changelog_uri"] = "https://github.com/cheddar-me/pecorino/CHANGELOG.md"
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.

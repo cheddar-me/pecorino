@@ -2,7 +2,7 @@
 
 source "https://rubygems.org"
 
-# Specify your gem's dependencies in raclette.gemspec
+# Specify your gem's dependencies in pecorino.gemspec
 gemspec
 
 gem "rake", "~> 13.0"

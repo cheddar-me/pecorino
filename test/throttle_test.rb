@@ -1,6 +1,6 @@
 require "test_helper"
 
-class RacletteThrottleTest < ActiveSupport::TestCase
+class PecorinoThrottleTest < ActiveSupport::TestCase
   self.use_transactional_tests = false
 
   def random_leaky_bucket_name(random: Random.new)
@@ -13,14 +13,14 @@ class RacletteThrottleTest < ActiveSupport::TestCase
   test "throttles using request!() and blocks" do
     slow_test!
 
-    throttle = Raclette::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
+    throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
 
     29.times do
       throttle.request!
     end
 
     # Depending on timing either the 31st or the 30th request may start to throttle
-    err = assert_raises Raclette::Throttle::Throttled do
+    err = assert_raises Pecorino::Throttle::Throttled do
       loop { throttle.request! }
     end
 
@@ -28,7 +28,7 @@ class RacletteThrottleTest < ActiveSupport::TestCase
     sleep 0.5
 
     # Ensure we are still throttled
-    err = assert_raises Raclette::Throttle::Throttled do
+    err = assert_raises Pecorino::Throttle::Throttled do
       throttle.request!
     end
     assert_equal throttle, err.throttle
@@ -43,7 +43,7 @@ class RacletteThrottleTest < ActiveSupport::TestCase
   test "still throttles using request() without raising exceptions" do
     slow_test!
 
-    throttle = Raclette::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
+    throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
 
     20.times do
       state = throttle.request
@@ -74,14 +74,14 @@ class RacletteThrottleTest < ActiveSupport::TestCase
   test "able_to_accept? returns the prediction whether the throttle will accept" do
     slow_test!
 
-    throttle = Raclette::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 2)
+    throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 2)
 
     assert throttle.able_to_accept?
     assert throttle.able_to_accept?(29)
     refute throttle.able_to_accept?(31)
 
     # Depending on timing either the 30th or the 31st request may start to throttle
-    assert_raises Raclette::Throttle::Throttled do
+    assert_raises Pecorino::Throttle::Throttled do
       loop { throttle.request! }
     end
     refute throttle.able_to_accept?
@@ -93,14 +93,14 @@ class RacletteThrottleTest < ActiveSupport::TestCase
   test "starts to throttle sooner with a higher fillup rate" do
     slow_test!
 
-    throttle = Raclette::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
+    throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
 
     15.times do
       throttle.request!(2)
     end
 
     # Depending on timing either the 31st or the 30th request may start to throttle
-    err = assert_raises Raclette::Throttle::Throttled do
+    err = assert_raises Pecorino::Throttle::Throttled do
       loop { throttle.request! }
     end
 
