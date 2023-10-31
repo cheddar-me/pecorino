@@ -2,7 +2,7 @@
 require 'rails/generators'
 require 'rails/generators/active_record'
 
-module Raclette
+module Pecorino
   #
   # Rails generator used for setting up GoodJob in a Rails application.
   # Run it with +bin/rails g good_job:install+ in your console.
@@ -17,7 +17,7 @@ module Raclette
 
     # Generates monolithic migration file that contains all database changes.
     def create_migration_file
-      migration_template 'migrations/create_raclette_tables.rb.erb', File.join(db_migrate_path, "create_raclette_tables.rb")
+      migration_template 'migrations/create_pecorino_tables.rb.erb', File.join(db_migrate_path, "create_pecorino_tables.rb")
     end
 
     private

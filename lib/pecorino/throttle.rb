@@ -5,7 +5,7 @@
 # checks will be done on the leaky bucket - any further requests will be refused until
 # the block is lifted. The block time can be arbitrarily higher or lower than the amount
 # of time it takes for the leaky bucket to leak out
-class Raclette::Throttle
+class Pecorino::Throttle
   class State < Struct.new(:blocked_until)
     # Tells whether this throttle is blocked, either due to the leaky bucket having filled up
     # or due to there being a timed block set because of an earlier event of the bucket having
@@ -26,7 +26,7 @@ class Raclette::Throttle
     #      ip_addr_throttle.request!
     #      user_email_throttle.request!
     #      db_insert_throttle.request!(n_items_to_insert)
-    #    rescue Raclette::Throttled => e
+    #    rescue Pecorino::Throttled => e
     #      deliver_notification(user) if e.throttle == user_email_throttle
     #
     # @return [Throttle]
@@ -44,12 +44,12 @@ class Raclette::Throttle
 
   # @param key[String] the key for both the block record and the leaky bucket
   # @param block_for[Numeric] the number of seconds to block any further requests for
-  # @param leaky_bucket_options Options for `Raclette::LeakyBucket.new`
-  # @see RacletteLeakyBucket.new
+  # @param leaky_bucket_options Options for `Pecorino::LeakyBucket.new`
+  # @see PecorinoLeakyBucket.new
   def initialize(key:, block_for: 30, **leaky_bucket_options)
     @key = key.to_s
     @block_for = block_for.to_f
-    @bucket = Raclette::LeakyBucket.new(key:, **leaky_bucket_options)
+    @bucket = Pecorino::LeakyBucket.new(key:, **leaky_bucket_options)
   end
 
   # Tells whether the throttle will let this number of requests pass without raising
@@ -73,7 +73,7 @@ class Raclette::Throttle
   #
   # @example      t.request!
   #               Note.create!(note_params)
-  #            rescue Raclette::Throttle::Throttled => e
+  #            rescue Pecorino::Throttle::Throttled => e
   #               [429, {"Retry-After" => e.retry_after.to_s}, []]
   #
   # If the method call succeeds it means that the request is not getting throttled.
@@ -108,7 +108,7 @@ class Raclette::Throttle
     # and set the block if we reached it
     query_params = {key: @key, block_for: @block_for}
     block_set_query = ActiveRecord::Base.sanitize_sql_array([<<~SQL, query_params])
-      INSERT INTO raclette_blocks AS t
+      INSERT INTO pecorino_blocks AS t
         (key, blocked_until)
       VALUES
         (:key, NOW() + ':block_for seconds'::interval)
@@ -125,7 +125,7 @@ class Raclette::Throttle
 
   def blocked_until(via_connection)
     block_check_query = ActiveRecord::Base.sanitize_sql_array([<<~SQL, @key])
-      SELECT blocked_until FROM raclette_blocks WHERE key = ? AND blocked_until >= NOW() LIMIT 1
+      SELECT blocked_until FROM pecorino_blocks WHERE key = ? AND blocked_until >= NOW() LIMIT 1
     SQL
     via_connection.uncached { via_connection.select_value(block_check_query) }
   end

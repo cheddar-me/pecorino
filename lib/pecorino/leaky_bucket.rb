@@ -24,7 +24,7 @@
 #
 # The storage use is one DB row per leaky bucket you need to manage (likely - one throttled entity such
 # as a combination of an IP address + the URL you need to procect). The `key` is an arbitrary string you provide.
-class Raclette::LeakyBucket
+class Pecorino::LeakyBucket
   class State < Struct.new(:level, :full)
     # Returns the level of the bucket after the operation on the LeakyBucket
     # object has taken place. There is a guarantee that no tokens have leaked
@@ -112,7 +112,7 @@ class Raclette::LeakyBucket
           )
         )
       FROM 
-        raclette_leaky_buckets AS t
+        pecorino_leaky_buckets AS t
       WHERE
         key = :key
     SQL
@@ -155,7 +155,7 @@ class Raclette::LeakyBucket
       fillup: n_tokens.to_f
     }
     sql = ActiveRecord::Base.sanitize_sql_array([<<~SQL, query_params])
-      INSERT INTO raclette_leaky_buckets AS t
+      INSERT INTO pecorino_leaky_buckets AS t
         (key, last_touched_at, may_be_deleted_after, level)
       VALUES
         (
