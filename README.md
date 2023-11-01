@@ -4,6 +4,8 @@ Pecorino is a rate limiter based on the concept of leaky buckets. It uses your D
 
 Pecorino is designed to integrate seamlessly into any Rails application using a Postgres database (at the moment there is no MySQL support, we would be delighted if you could add it).
 
+If you would like to know more about the leaky bucket algorithm: the [Wikipedia article](https://en.wikipedia.org/wiki/Leaky_bucket) is a great starting point.
+
 ## Installation
 
 Add this line to your application's Gemfile:
