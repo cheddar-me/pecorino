@@ -80,7 +80,7 @@ Throttles and leaky buckets are transient resources. If you are using Postgres r
 
 ```ruby
 ActiveRecord::Base.connection.execute("ALTER TABLE pecorino_leaky_buckets SET UNLOGGED")
-ActiveRecord::Base.connection.execute("ALTER TABLE pecorino_leaky_blocks SET UNLOGGED")
+ActiveRecord::Base.connection.execute("ALTER TABLE pecorino_blocks SET UNLOGGED")
 ```
 
 ## Development
