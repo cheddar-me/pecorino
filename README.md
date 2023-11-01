@@ -74,6 +74,15 @@ We recommend running the following bit of code every couple of hours (via cron o
 
     Pecorino.prune!
 
+## Using unlogged tables for reduced replication load
+
+Throttles and leaky buckets are transient resources. If you are using Postgres replication, it might be prudent to set the Pecorino tables to `UNLOGGED` which will exclude them from replication - and save you bandwidth and storage on your RR. To do so, add the following statements to your migration:
+
+```ruby
+ActiveRecord::Base.connection.execute("ALTER TABLE pecorino_leaky_buckets SET UNLOGGED")
+ActiveRecord::Base.connection.execute("ALTER TABLE pecorino_leaky_blocks SET UNLOGGED")
+```
+
 ## Development
 
 After checking out the repo, run `bundle`. Then, run `rake test` to run the tests.
