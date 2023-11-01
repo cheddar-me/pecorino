@@ -60,7 +60,7 @@ Sometimes you don't want to use a throttle, but you want to track the amount add
 
 
 ```ruby
-b = Pecorino::LeakyBucket.new(key: "some_b", capacity: 100, leak_rate: 5)
+b = Pecorino::LeakyBucket.new(key: "some_b", capacity: 100, leak_rate: 1)
 b.fillup(2) #=> Pecorino::LeakyBucket::State(full?: false, level: 2.0)
 sleep 0.2
 b.state #=> Pecorino::LeakyBucket::State(full?: false, level: 1.8)
