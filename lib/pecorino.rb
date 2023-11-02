@@ -19,7 +19,6 @@ module Pecorino
     ActiveRecord::Base.connection.execute("DELETE FROM pecorino_leaky_buckets WHERE may_be_deleted_after < NOW()")
   end
 
-
   # Creates the tables and indexes needed for Pecorino. Call this from your migrations like so:
   #
   #     class CreatePecorinoTables < ActiveRecord::Migration[7.0]
