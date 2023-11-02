@@ -3,15 +3,15 @@
 require_relative "lib/pecorino/version"
 
 Gem::Specification.new do |spec|
-  spec.name          = "pecorino"
-  spec.version       = Pecorino::VERSION
-  spec.authors       = ["Julik Tarkhanov"]
-  spec.email         = ["me@julik.nl"]
+  spec.name = "pecorino"
+  spec.version = Pecorino::VERSION
+  spec.authors = ["Julik Tarkhanov"]
+  spec.email = ["me@julik.nl"]
 
-  spec.summary       = "Database-based rate limiter using leaky buckets"
-  spec.description   = "Pecorino allows you to define throttles and rate meters for your metered resources, all through your standard DB"
-  spec.homepage      = "https://github.com/cheddar-me/pecorino"
-  spec.license       = "MIT"
+  spec.summary = "Database-based rate limiter using leaky buckets"
+  spec.description = "Pecorino allows you to define throttles and rate meters for your metered resources, all through your standard DB"
+  spec.homepage = "https://github.com/cheddar-me/pecorino"
+  spec.license = "MIT"
   spec.required_ruby_version = ">= 2.4.0"
 
   # spec.metadata["allowed_push_host"] = "TODO: Set to 'https://mygemserver.com'"
@@ -25,8 +25,8 @@ Gem::Specification.new do |spec|
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
     `git ls-files -z`.split("\x0").reject { |f| f.match(%r{\A(?:test|spec|features)/}) }
   end
-  spec.bindir        = "exe"
-  spec.executables   = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
+  spec.bindir = "exe"
+  spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
   # Uncomment to register a new dependency of your gem
@@ -35,6 +35,8 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "activesupport", "~> 7"
   spec.add_development_dependency "rake", "~> 13.0"
   spec.add_development_dependency "minitest", "~> 5.0"
+  spec.add_development_dependency "standard"
+  spec.add_development_dependency "magic_frozen_string_literal"
 
   # For more information and examples about making a new gem, checkout our
   # guide at: https://bundler.io/guides/creating_gem.html

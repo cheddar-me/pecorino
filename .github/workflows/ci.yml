@@ -65,7 +65,7 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-      - name: Tests
+      - name: "Tests and Lint"
         run: bundle exec rake
         # env:
         #   MYSQL_HOST: 127.0.0.1
