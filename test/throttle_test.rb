@@ -10,6 +10,7 @@ class PecorinoThrottleTest < ActiveSupport::TestCase
 
   setup do
     seed_db_name = Random.new(Minitest.seed).hex(4)
+    ActiveRecord::Migration.verbose = false
     ActiveRecord::Base.establish_connection(adapter: 'postgresql', database: 'postgres')
     ActiveRecord::Base.connection.create_database('pecorino_tests_%s' % seed_db_name, charset: :unicode)
     ActiveRecord::Base.connection.close
