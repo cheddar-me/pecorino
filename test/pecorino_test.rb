@@ -2,12 +2,8 @@
 
 require "test_helper"
 
-class PecorinoTest < Minitest::Test
-  def test_that_it_has_a_version_number
+class PecorinoTest < ActiveSupport::TestCase
+  test "has a version number" do
     refute_nil ::Pecorino::VERSION
-  end
-
-  def test_it_does_something_useful
-    assert false
   end
 end

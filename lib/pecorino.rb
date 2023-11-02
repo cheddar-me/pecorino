@@ -21,10 +21,11 @@ module Pecorino
 
 
   # Creates the tables and indexes needed for Pecorino. Call this from your migrations like so:
-  # class CreatePecorinoTables < ActiveRecord::Migration<%= migration_version %>
   #
-  #     def change
-  #       Pecorino.create_tables(self)
+  #     class CreatePecorinoTables < ActiveRecord::Migration[7.0]
+  #       def change
+  #         Pecorino.create_tables(self)
+  #       end
   #     end
   #
   # @param active_record_schema[ActiveRecord::SchemaMigration] the migration through which we will create the tables

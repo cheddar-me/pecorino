@@ -1,14 +1,29 @@
 require "test_helper"
 
 class LeakyBucketTest < ActiveSupport::TestCase
-  self.use_transactional_tests = false
+  setup do
+    seed_db_name = Random.new(Minitest.seed).hex(4)
+    ActiveRecord::Base.establish_connection(adapter: 'postgresql', database: 'postgres')
+    ActiveRecord::Base.connection.create_database('pecorino_tests_%s' % seed_db_name, charset: :unicode)
+    ActiveRecord::Base.connection.close
+    ActiveRecord::Base.establish_connection(adapter: 'postgresql', encoding: 'unicode', database: 'pecorino_tests_%s' % seed_db_name)
+
+    ActiveRecord::Schema.define(version: 1) do |via_definer|
+      Pecorino.create_tables(via_definer)
+    end
+  end
+
+  teardown do
+    seed_db_name = Random.new(Minitest.seed).hex(4)
+    ActiveRecord::Base.connection.close
+    ActiveRecord::Base.establish_connection(adapter: 'postgresql', database: 'postgres')
+    ActiveRecord::Base.connection.drop_database('pecorino_tests_%s' % seed_db_name)
+  end
 
   # This test is performed multiple times since time is involved, and there can be fluctuations
   # between the iterations
   8.times do |n|
     test "on iteration #{n} accepts a certain number of tokens and returns the new bucket level" do
-      slow_test!
-
       bucket = Pecorino::LeakyBucket.new(key: Random.uuid, leak_rate: 1.1, capacity: 15)
       assert_in_delta bucket.state.level, 0, 0.0001
 
@@ -28,8 +43,6 @@ class LeakyBucketTest < ActiveSupport::TestCase
   end
 
   test "does not allow a bucket to be created with a negative value" do
-    slow_test!
-
     bucket = Pecorino::LeakyBucket.new(key: Random.uuid, leak_rate: 1.1, capacity: 15)
     assert_in_delta bucket.state.level, 0, 0.0001
 
@@ -38,8 +51,6 @@ class LeakyBucketTest < ActiveSupport::TestCase
   end
 
   test "allows check for the bucket leaking out" do
-    slow_test!
-
     bucket = Pecorino::LeakyBucket.new(key: Random.uuid, leak_rate: 1.1, capacity: 15)
     assert_in_delta bucket.state.level, 0, 0.0001
 
@@ -52,8 +63,6 @@ class LeakyBucketTest < ActiveSupport::TestCase
   end
 
   test "allows the bucket to leak out completely" do
-    slow_test!
-
     bucket = Pecorino::LeakyBucket.new(key: Random.uuid, leak_rate: 2, capacity: 1)
     assert_predicate bucket.fillup(1), :full?
 

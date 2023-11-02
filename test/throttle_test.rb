@@ -1,8 +1,6 @@
 require "test_helper"
 
 class PecorinoThrottleTest < ActiveSupport::TestCase
-  self.use_transactional_tests = false
-
   def random_leaky_bucket_name(random: Random.new)
     (1..32).map do
       # bytes 97 to 122 are printable lowercase a-z
@@ -10,9 +8,26 @@ class PecorinoThrottleTest < ActiveSupport::TestCase
     end.pack("C*")
   end
 
-  test "throttles using request!() and blocks" do
-    slow_test!
+  setup do
+    seed_db_name = Random.new(Minitest.seed).hex(4)
+    ActiveRecord::Base.establish_connection(adapter: 'postgresql', database: 'postgres')
+    ActiveRecord::Base.connection.create_database('pecorino_tests_%s' % seed_db_name, charset: :unicode)
+    ActiveRecord::Base.connection.close
+    ActiveRecord::Base.establish_connection(adapter: 'postgresql', encoding: 'unicode', database: 'pecorino_tests_%s' % seed_db_name)
 
+    ActiveRecord::Schema.define(version: 1) do |via_definer|
+      Pecorino.create_tables(via_definer)
+    end
+  end
+
+  teardown do
+    seed_db_name = Random.new(Minitest.seed).hex(4)
+    ActiveRecord::Base.connection.close
+    ActiveRecord::Base.establish_connection(adapter: 'postgresql', database: 'postgres')
+    ActiveRecord::Base.connection.drop_database('pecorino_tests_%s' % seed_db_name)
+  end
+
+  test "throttles using request!() and blocks" do
     throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
 
     29.times do
@@ -41,8 +56,6 @@ class PecorinoThrottleTest < ActiveSupport::TestCase
   end
 
   test "still throttles using request() without raising exceptions" do
-    slow_test!
-
     throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
 
     20.times do
@@ -72,8 +85,6 @@ class PecorinoThrottleTest < ActiveSupport::TestCase
   end
 
   test "able_to_accept? returns the prediction whether the throttle will accept" do
-    slow_test!
-
     throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 2)
 
     assert throttle.able_to_accept?
@@ -91,8 +102,6 @@ class PecorinoThrottleTest < ActiveSupport::TestCase
   end
 
   test "starts to throttle sooner with a higher fillup rate" do
-    slow_test!
-
     throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
 
     15.times do
