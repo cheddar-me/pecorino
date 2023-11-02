@@ -17,19 +17,12 @@ gem 'pecorino'
 And then execute:
 
     $ bundle install
-
-Or install it yourself as:
-
-    $ gem install pecorino
-
-## Usage
-
-First, add and run the migration to create the pecorino tables:
-
     $ bin/rails g pecorino:install
     $ bin/rails db:migrate
 
-Once that is done, you can use Pecorino to start defining your throttles. Imagine you have a resource called `vault` and you want to limit the number of updates to it to 5 per second. To achieve that, instantiate a new `Throttle` in your controller or job code, and then trigger it using `Throttle#request!`. A call to `request!` registers 1 token getting added to the bucket. If the bucket is full, or the throttle is currently in "block" mode (has recently been triggered), a `Pecorino::Throttle::Throttled` exception will be raised.
+## Usage
+
+Once the installation is done you can use Pecorino to start defining your throttles. Imagine you have a resource called `vault` and you want to limit the number of updates to it to 5 per second. To achieve that, instantiate a new `Throttle` in your controller or job code, and then trigger it using `Throttle#request!`. A call to `request!` registers 1 token getting added to the bucket. If the bucket is full, or the throttle is currently in "block" mode (has recently been triggered), a `Pecorino::Throttle::Throttled` exception will be raised.
 
 ```ruby
 throttle = Pecorino::Throttle.new(key: "vault", leak_rate: 5, capacity: 5)
@@ -72,7 +65,9 @@ Check out the inline YARD documentation for more options.
 
 We recommend running the following bit of code every couple of hours (via cron or similar) to delete the stale blocks and leaky buckets from the system:
 
-    Pecorino.prune!
+```ruby
+Pecorino.prune!
+```
 
 ## Using unlogged tables for reduced replication load
 
