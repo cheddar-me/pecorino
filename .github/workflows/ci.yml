@@ -67,6 +67,7 @@ jobs:
           bundler-cache: true
       - name: "Tests and Lint"
         run: bundle exec rake
-        # env:
+        env:
+          TESTOPTS: "--fail-fast"
         #   MYSQL_HOST: 127.0.0.1
         #   MYSQL_PORT: 3306

@@ -37,6 +37,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "minitest", "~> 5.0"
   spec.add_development_dependency "standard"
   spec.add_development_dependency "magic_frozen_string_literal"
+  spec.add_development_dependency "minitest-fail-fast"
 
   # For more information and examples about making a new gem, checkout our
   # guide at: https://bundler.io/guides/creating_gem.html
