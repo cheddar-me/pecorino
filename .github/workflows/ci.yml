@@ -68,6 +68,9 @@ jobs:
       - name: "Tests and Lint"
         run: bundle exec rake
         env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
           TESTOPTS: "--fail-fast"
         #   MYSQL_HOST: 127.0.0.1
         #   MYSQL_PORT: 3306
