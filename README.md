@@ -37,6 +37,16 @@ rescue_from Pecorino::Throttle::Throttled do |e|
 end
 ```
 
+and in a Rack application you can rescue inline:
+
+```ruby
+def call(env)
+  # ...your code
+rescue Pecorino::Throttle::Throttled => e
+  [429, {"Retry-After" => e.retry_after.to_s}, []]
+end
+```
+
 The exception has an attribute called `retry_after` which you can use to render the appropriate 429 response.
 
 Although this approach might be susceptible to race conditions, you can interrogate your throttle before potentially causing an exception - and display an appropriate error message if the throttle would trigger anyway:
