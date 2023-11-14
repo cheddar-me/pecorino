@@ -28,6 +28,14 @@ Once the installation is done you can use Pecorino to start defining your thrott
 throttle = Pecorino::Throttle.new(key: "vault", leak_rate: 5, capacity: 5)
 throttle.request!
 ```
+In a Rails controller you can then rescue from this exception to render the appropriate response:
+
+```ruby
+rescue_from Pecorino::Throttle::Throttled do |e|
+  response.set_header('Retry-After', e.retry_after.to_s)
+  render nothing: true, status: 429
+end
+```
 
 The exception has an attribute called `retry_after` which you can use to render the appropriate 429 response.
 
