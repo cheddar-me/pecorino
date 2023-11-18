@@ -6,7 +6,7 @@
 # the block is lifted. The block time can be arbitrarily higher or lower than the amount
 # of time it takes for the leaky bucket to leak out
 class Pecorino::Throttle
-  class State < Struct.new(:blocked_until)
+  State = Struct.new(:blocked_until) do
     # Tells whether this throttle is blocked, either due to the leaky bucket having filled up
     # or due to there being a timed block set because of an earlier event of the bucket having
     # filled up

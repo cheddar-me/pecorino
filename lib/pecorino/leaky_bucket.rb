@@ -25,7 +25,7 @@
 # The storage use is one DB row per leaky bucket you need to manage (likely - one throttled entity such
 # as a combination of an IP address + the URL you need to procect). The `key` is an arbitrary string you provide.
 class Pecorino::LeakyBucket
-  class State < Struct.new(:level, :full)
+  State = Struct.new(:level, :full) do
     # Returns the level of the bucket after the operation on the LeakyBucket
     # object has taken place. There is a guarantee that no tokens have leaked
     # from the bucket between the operation and the freezing of the State
