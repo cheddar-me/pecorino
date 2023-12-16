@@ -181,7 +181,7 @@ class Pecorino::LeakyBucket
       RETURNING
         level,
         -- Compare level to the capacity inside the DB so that we won't have rounding issues
-        level >= :capa AS did_fillup
+        level >= :capa AS did_overflow
     SQL
 
     # Note the use of .uncached here. The AR query cache will actually see our
@@ -189,8 +189,8 @@ class Pecorino::LeakyBucket
     # correctly, thus the clock_timestamp() value would be frozen between calls. We don't want that here.
     # See https://stackoverflow.com/questions/73184531/why-would-postgres-clock-timestamp-freeze-inside-a-rails-unit-test
     upserted = conn.uncached { conn.select_one(sql) }
-    capped_level_after_fillup, did_fillup = upserted.fetch("level"), upserted.fetch("did_fillup")
+    capped_level_after_fillup, did_overflow = upserted.fetch("level"), upserted.fetch("did_overflow")
 
-    State.new(capped_level_after_fillup, did_fillup)
+    State.new(capped_level_after_fillup, did_overflow)
   end
 end
