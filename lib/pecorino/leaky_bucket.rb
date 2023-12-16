@@ -178,15 +178,19 @@ class Pecorino::LeakyBucket
               t.level + :fillup - (EXTRACT(EPOCH FROM (EXCLUDED.last_touched_at - t.last_touched_at)) * :leak_rate)
           )
         )
-      RETURNING level
+      RETURNING
+        level,
+        -- Compare level to the capacity inside the DB so that we won't have rounding issues
+        level >= :capa AS did_overflow
     SQL
 
     # Note the use of .uncached here. The AR query cache will actually see our
-    # query as a repeat (since we use "select_value" for the RETURNING bit) and will not call into Postgres
+    # query as a repeat (since we use "select_one" for the RETURNING bit) and will not call into Postgres
     # correctly, thus the clock_timestamp() value would be frozen between calls. We don't want that here.
     # See https://stackoverflow.com/questions/73184531/why-would-postgres-clock-timestamp-freeze-inside-a-rails-unit-test
-    level_after_fillup = conn.uncached { conn.select_value(sql) }
+    upserted = conn.uncached { conn.select_one(sql) }
+    capped_level_after_fillup, did_overflow = upserted.fetch("level"), upserted.fetch("did_overflow")
 
-    State.new(level_after_fillup, (@capacity - level_after_fillup).abs < 0.01)
+    State.new(capped_level_after_fillup, did_overflow)
   end
 end
