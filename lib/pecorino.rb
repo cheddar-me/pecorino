@@ -1,8 +1,12 @@
 # frozen_string_literal: true
 
+require "active_support/concern"
+require "active_record/sanitization"
+
 require_relative "pecorino/version"
 require_relative "pecorino/leaky_bucket"
 require_relative "pecorino/throttle"
+require_relative "pecorino/postgres"
 require_relative "pecorino/railtie" if defined?(Rails::Railtie)
 
 module Pecorino

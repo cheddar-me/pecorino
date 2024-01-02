@@ -106,24 +106,14 @@ class Pecorino::Throttle
     return State.new(nil) unless @bucket.fillup(n.to_f).full?
 
     # and set the block if we reached it
-    query_params = {key: @key, block_for: @block_for}
-    block_set_query = ActiveRecord::Base.sanitize_sql_array([<<~SQL, query_params])
-      INSERT INTO pecorino_blocks AS t
-        (key, blocked_until)
-      VALUES
-        (:key, NOW() + ':block_for seconds'::interval)
-      ON CONFLICT (key) DO UPDATE SET
-        blocked_until = GREATEST(EXCLUDED.blocked_until, t.blocked_until)
-      RETURNING blocked_until;
-    SQL
-
-    fresh_blocked_until = conn.uncached { conn.select_value(block_set_query) }
+    fresh_blocked_until = Pecorino::Postgres.set_block(conn: conn, key: @key, block_for: @block_for)
     State.new(fresh_blocked_until.utc)
   end
 
   private
 
   def blocked_until(via_connection)
+    # This query is database-agnostic, so it is not in the various database modules
     block_check_query = ActiveRecord::Base.sanitize_sql_array([<<~SQL, @key])
       SELECT blocked_until FROM pecorino_blocks WHERE key = ? AND blocked_until >= NOW() LIMIT 1
     SQL

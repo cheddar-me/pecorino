@@ -86,7 +86,8 @@ class Pecorino::LeakyBucket
   # @param n_tokens[Float]
   # @return [State] the state of the bucket after the operation
   def fillup(n_tokens)
-    add_tokens(n_tokens.to_f)
+    capped_level_after_fillup, did_overflow = Pecorino::Postgres.add_tokens(conn: ActiveRecord::Base.connection, capa: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
+    State.new(capped_level_after_fillup, did_overflow)
   end
 
   # Returns the current state of the bucket, containing the level and whether the bucket is full.
@@ -94,34 +95,8 @@ class Pecorino::LeakyBucket
   #
   # @return [State] the snapshotted state of the bucket at time of query
   def state
-    conn = ActiveRecord::Base.connection
-    query_params = {
-      key: @key,
-      capa: @capacity.to_f,
-      leak_rate: @leak_rate.to_f
-    }
-    # The `level` of the bucket is what got stored at `last_touched_at` time, and we can
-    # extrapolate from it to see how many tokens have leaked out since `last_touched_at` -
-    # we don't need to UPDATE the value in the bucket here
-    sql = ActiveRecord::Base.sanitize_sql_array([<<~SQL, query_params])
-      SELECT
-        GREATEST(
-          0.0, LEAST(
-            :capa,
-            t.level - (EXTRACT(EPOCH FROM (clock_timestamp() - t.last_touched_at)) * :leak_rate)
-          )
-        )
-      FROM 
-        pecorino_leaky_buckets AS t
-      WHERE
-        key = :key
-    SQL
-
-    # If the return value of the query is a NULL it means no such bucket exists,
-    # so we assume the bucket is empty
-    current_level = conn.uncached { conn.select_value(sql) } || 0.0
-
-    State.new(current_level, (@capacity - current_level).abs < 0.01)
+    current_level, is_full = Pecorino::Postgres.state(conn: ActiveRecord::Base.connection, key: @key, capa: @capacity, leak_rate: @leak_rate)
+    State.new(current_level, is_full)
   end
 
   # Tells whether the bucket can accept the amount of tokens without overflowing.
@@ -134,63 +109,5 @@ class Pecorino::LeakyBucket
   # @return [boolean]
   def able_to_accept?(n_tokens)
     (state.level + n_tokens) < @capacity
-  end
-
-  private
-
-  def add_tokens(n_tokens)
-    conn = ActiveRecord::Base.connection
-
-    # Take double the time it takes the bucket to empty under normal circumstances
-    # until the bucket may be deleted.
-    may_be_deleted_after_seconds = (@capacity.to_f / @leak_rate.to_f) * 2.0
-
-    # Create the leaky bucket if it does not exist, and update
-    # to the new level, taking the leak rate into account - if the bucket exists.
-    query_params = {
-      key: @key,
-      capa: @capacity.to_f,
-      delete_after_s: may_be_deleted_after_seconds,
-      leak_rate: @leak_rate.to_f,
-      fillup: n_tokens.to_f
-    }
-    sql = ActiveRecord::Base.sanitize_sql_array([<<~SQL, query_params])
-      INSERT INTO pecorino_leaky_buckets AS t
-        (key, last_touched_at, may_be_deleted_after, level)
-      VALUES
-        (
-          :key,
-          clock_timestamp(),
-          clock_timestamp() + ':delete_after_s second'::interval,
-          GREATEST(0.0,
-            LEAST(
-              :capa,
-              :fillup
-            )
-          )
-        )
-      ON CONFLICT (key) DO UPDATE SET
-        last_touched_at = EXCLUDED.last_touched_at,
-        may_be_deleted_after = EXCLUDED.may_be_deleted_after,
-        level = GREATEST(0.0,
-          LEAST(
-              :capa,
-              t.level + :fillup - (EXTRACT(EPOCH FROM (EXCLUDED.last_touched_at - t.last_touched_at)) * :leak_rate)
-          )
-        )
-      RETURNING
-        level,
-        -- Compare level to the capacity inside the DB so that we won't have rounding issues
-        level >= :capa AS did_overflow
-    SQL
-
-    # Note the use of .uncached here. The AR query cache will actually see our
-    # query as a repeat (since we use "select_one" for the RETURNING bit) and will not call into Postgres
-    # correctly, thus the clock_timestamp() value would be frozen between calls. We don't want that here.
-    # See https://stackoverflow.com/questions/73184531/why-would-postgres-clock-timestamp-freeze-inside-a-rails-unit-test
-    upserted = conn.uncached { conn.select_one(sql) }
-    capped_level_after_fillup, did_overflow = upserted.fetch("level"), upserted.fetch("did_overflow")
-
-    State.new(capped_level_after_fillup, did_overflow)
   end
 end
