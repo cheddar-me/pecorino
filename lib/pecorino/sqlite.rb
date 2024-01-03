@@ -76,8 +76,8 @@ module Pecorino::Sqlite
         (
           :id,
           :key,
-          DATETIME('now'),
-          DATETIME('now', '+:delete_after_s seconds'),
+          DATETIME('now'), -- Precision loss must be avoided here as it is used for calculations
+          DATETIME('now', '+:delete_after_s seconds'), -- Precision loss is acceptable here
           MAX(0.0,
             MIN(
               :capa,
@@ -115,7 +115,7 @@ module Pecorino::Sqlite
       INSERT INTO pecorino_blocks AS t
         (key, blocked_until)
       VALUES
-        (:key, NOW() + ':block_for seconds'::interval)
+        (:key, DATETIME() + ':block_for seconds'::interval)
       ON CONFLICT (key) DO UPDATE SET
         blocked_until = MAX(EXCLUDED.blocked_until, t.blocked_until)
       RETURNING blocked_until;
