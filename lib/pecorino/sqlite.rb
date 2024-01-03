@@ -6,11 +6,17 @@ module Pecorino::Sqlite
   end
 
   def state(conn:, key:, capa:, leak_rate:)
+    # With a server database, it is really important to use the clock of the database itself so
+    # that concurrent requests will see consistent bucket level calculations. Since SQLite is
+    # actually in-process, there is no point using DB functions - and besides, SQLite reduces
+    # the time precision to the nearest millisecond - and the calculations with timestamps are
+    # obtuse. Therefore we can use the current time inside the Ruby VM - it doesn't matter all that
+    # much but saves us on writing some gnarly SQL to have SQLite produce consistent precise timestamps.
     query_params = {
       key: key.to_s,
       capa: capa.to_f,
       leak_rate: leak_rate.to_f,
-      now_s: Time.now.to_f # SQLite is in-process, so having a consistent time between servers is impossible
+      now_s: Time.now.to_f
     }
     # The `level` of the bucket is what got stored at `last_touched_at` time, and we can
     # extrapolate from it to see how many tokens have leaked out since `last_touched_at` -
@@ -47,7 +53,7 @@ module Pecorino::Sqlite
       capa: capa.to_f,
       delete_after_s: may_be_deleted_after_seconds,
       leak_rate: leak_rate.to_f,
-      now_s: Time.now.to_f,
+      now_s: Time.now.to_f, # See above as to why we are using a time value passed in
       fillup: n_tokens.to_f,
       id: SecureRandom.uuid # SQLite3 does not autogenerate UUIDs
     }
@@ -88,8 +94,8 @@ module Pecorino::Sqlite
     # correctly, thus the clock_timestamp() value would be frozen between calls. We don't want that here.
     # See https://stackoverflow.com/questions/73184531/why-would-postgres-clock-timestamp-freeze-inside-a-rails-unit-test
     upserted = conn.uncached { conn.select_one(sql) }
-    capped_level_after_fillup, did_overflow = upserted.fetch("level"), upserted.fetch("did_overflow")
-    [capped_level_after_fillup, did_overflow]
+    capped_level_after_fillup, one_if_did_overflow = upserted.fetch("level"), upserted.fetch("did_overflow")
+    [capped_level_after_fillup, one_if_did_overflow == 1]
   end
 
   def set_block(conn:, key:, block_for:)
