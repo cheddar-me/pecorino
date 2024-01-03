@@ -55,8 +55,8 @@ module Pecorino::Sqlite
       VALUES
         (
           :key,
-          clock_timestamp(),
-          clock_timestamp() + ':delete_after_s second'::interval,
+          DATETIME('now'),
+          DATETIME('now') + ':delete_after_s second'::interval,
           MAX(0.0,
             MIN(
               :capa,
@@ -70,7 +70,7 @@ module Pecorino::Sqlite
         level = MAX(0.0,
           MIN(
               :capa,
-              t.level + :fillup - (EXTRACT(EPOCH FROM (EXCLUDED.last_touched_at - t.last_touched_at)) * :leak_rate)
+              t.level + :fillup - (UNIXEPOCH(DATETIME('now')) - UNIXEPOCH(t.last_touched_at)) * :leak_rate
           )
         )
       RETURNING
