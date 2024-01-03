@@ -114,6 +114,14 @@ class Pecorino::LeakyBucket
   private
 
   def database_implementation
-    Pecorino::Postgres
+    adapter_name = ActiveRecord::Base.connection.adapter_name
+    case adapter_name
+    when /postgres/i
+      Pecorino::Postgres
+    when /sqlite/i
+      Pecorino::Sqlite
+    else
+      raise "Pecorino does not support #{adapter_name} just yet"
+    end
   end
 end
