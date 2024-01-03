@@ -2,14 +2,10 @@
 
 require "test_helper"
 
-class LeakyBucketTest < ActiveSupport::TestCase
+class LeakyBucketSqliteTest < ActiveSupport::TestCase
   setup do
-    seed_db_name = Random.new(Minitest.seed).hex(4)
     ActiveRecord::Migration.verbose = false
-    ActiveRecord::Base.establish_connection(adapter: "postgresql", database: "postgres")
-    ActiveRecord::Base.connection.create_database("pecorino_tests_%s" % seed_db_name, charset: :unicode)
-    ActiveRecord::Base.connection.close
-    ActiveRecord::Base.establish_connection(adapter: "postgresql", encoding: "unicode", database: "pecorino_tests_%s" % seed_db_name)
+    ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: test_db_filename)
 
     ActiveRecord::Schema.define(version: 1) do |via_definer|
       Pecorino.create_tables(via_definer)
@@ -17,10 +13,12 @@ class LeakyBucketTest < ActiveSupport::TestCase
   end
 
   teardown do
-    seed_db_name = Random.new(Minitest.seed).hex(4)
     ActiveRecord::Base.connection.close
-    ActiveRecord::Base.establish_connection(adapter: "postgresql", database: "postgres")
-    ActiveRecord::Base.connection.drop_database("pecorino_tests_%s" % seed_db_name)
+    FileUtils.rm_rf(test_db_filename)
+  end
+
+  def test_db_filename
+    "pecorino_tests_%s.sqlite3" % Random.new(Minitest.seed).hex(4)
   end
 
   # This test is performed multiple times since time is involved, and there can be fluctuations
