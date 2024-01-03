@@ -16,10 +16,10 @@ module Pecorino::Sqlite
     # we don't need to UPDATE the value in the bucket here
     sql = Sanitizer.new(conn).sanitize_sql_array([<<~SQL, query_params])
       SELECT
-        GREATEST(
-          0.0, LEAST(
+        MAX(
+          0.0, MIN(
             :capa,
-            t.level - (EXTRACT(EPOCH FROM (clock_timestamp() - t.last_touched_at)) * :leak_rate)
+            t.level - (UNIXEPOCH(DATETIME('now')) - UNIXEPOCH(t.last_touched_at)) * :leak_rate
           )
         )
       FROM 
@@ -57,8 +57,8 @@ module Pecorino::Sqlite
           :key,
           clock_timestamp(),
           clock_timestamp() + ':delete_after_s second'::interval,
-          GREATEST(0.0,
-            LEAST(
+          MAX(0.0,
+            MIN(
               :capa,
               :fillup
             )
@@ -67,8 +67,8 @@ module Pecorino::Sqlite
       ON CONFLICT (key) DO UPDATE SET
         last_touched_at = EXCLUDED.last_touched_at,
         may_be_deleted_after = EXCLUDED.may_be_deleted_after,
-        level = GREATEST(0.0,
-          LEAST(
+        level = MAX(0.0,
+          MIN(
               :capa,
               t.level + :fillup - (EXTRACT(EPOCH FROM (EXCLUDED.last_touched_at - t.last_touched_at)) * :leak_rate)
           )
@@ -96,7 +96,7 @@ module Pecorino::Sqlite
       VALUES
         (:key, NOW() + ':block_for seconds'::interval)
       ON CONFLICT (key) DO UPDATE SET
-        blocked_until = GREATEST(EXCLUDED.blocked_until, t.blocked_until)
+        blocked_until = MAX(EXCLUDED.blocked_until, t.blocked_until)
       RETURNING blocked_until;
     SQL
     conn.uncached { conn.select_value(block_set_query) }
