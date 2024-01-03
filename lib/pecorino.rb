@@ -38,11 +38,7 @@ module Pecorino
     active_record_schema.create_table :pecorino_leaky_buckets, id: :uuid do |t|
       t.string :key, null: false
       t.float :level, null: false
-      if active_record_schema.connection.adapter_name =~ /sqlite/
-        t.text :last_touched_at, null: false
-      else
-        t.datetime :last_touched_at, null: false
-      end
+      t.datetime :last_touched_at, null: false
       t.datetime :may_be_deleted_after, null: false
     end
     active_record_schema.add_index :pecorino_leaky_buckets, [:key], unique: true
