@@ -6,20 +6,21 @@ module Pecorino::Sqlite
   end
 
   def fractional_seconds_since_last_touched
-    t_now = <<~SQL.strip
-      strftime('%s') + (strftime('%f') - round(strftime('%f')))
-    SQL
-
+    # SQLite is peculiar in that its datetime functions do not give fractrional seconds.
+    # The only way to get seconds with fractions is to use the '%f' format specifier
+    # with strftime(). Since we need subsecond-precision timestamps for Pecorino, we need
+    # to jump through some hoops to perform our calculations on fractional seconds. The hoops entail
+    # subtracting the whole seconds from the fractional seconds
     t_last_touched = <<~SQL.strip
-      strftime('%s', t.last_touched_at) + (strftime('%f', t.last_touched_at) - round(strftime('%f', t.last_touched_at)))
+      strftime('%s', t.last_touched_at) + (strftime('%f', t.last_touched_at) - floor(strftime('%f', t.last_touched_at)))
     SQL
 
-    "(#{t_now} - #{t_last_touched})"
+    "(#{fractional_seconds_from_now} - #{t_last_touched})"
   end
 
   def fractional_seconds_from_now
     <<~SQL.strip
-      strftime('%s') + (strftime('%f') - round(strftime('%f')))
+      strftime('%s') + (strftime('%f') - floor(strftime('%f')))
     SQL
   end
 
