@@ -76,7 +76,7 @@ module Pecorino::Sqlite
         (
           :id,
           :key,
-          DATETIME('now'), -- Precision loss must be avoided here as it is used for calculations
+          strftime('%Y-%m-%d %H:%M:%f'), -- Precision loss must be avoided here as it is used for calculations
           DATETIME('now', '+:delete_after_s seconds'), -- Precision loss is acceptable here
           MAX(0.0,
             MIN(
