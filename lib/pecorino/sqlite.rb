@@ -5,6 +5,24 @@ module Pecorino::Sqlite
     include ActiveRecord::Sanitization::ClassMethods
   end
 
+  def fractional_seconds_since_last_touched
+    t_now = <<~SQL.strip
+      strftime('%s') + (strftime('%f') - round(strftime('%f')))
+    SQL
+
+    t_last_touched = <<~SQL.strip
+      strftime('%s', t.last_touched_at) + (strftime('%f', t.last_touched_at) - round(strftime('%f', t.last_touched_at)))
+    SQL
+
+    "(#{t_now} - #{t_last_touched})"
+  end
+
+  def fractional_seconds_from_now
+    <<~SQL.strip
+      strftime('%s') + (strftime('%f') - round(strftime('%f')))
+    SQL
+  end
+
   def state(conn:, key:, capa:, leak_rate:)
     query_params = {
       key: key.to_s,
@@ -19,7 +37,7 @@ module Pecorino::Sqlite
         MAX(
           0.0, MIN(
             :capa,
-            t.level - (UNIXEPOCH(DATETIME('now')) - UNIXEPOCH(t.last_touched_at)) * :leak_rate
+            t.level - (#{fractional_seconds_since_last_touched} * :leak_rate)
           )
         )
       FROM 
@@ -46,17 +64,19 @@ module Pecorino::Sqlite
       capa: capa.to_f,
       delete_after_s: may_be_deleted_after_seconds,
       leak_rate: leak_rate.to_f,
-      fillup: n_tokens.to_f
+      fillup: n_tokens.to_f,
+      id: SecureRandom.uuid # SQLite3 does not autogenerate UUIDs
     }
 
     sql = Sanitizer.new(conn).sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_leaky_buckets AS t
-        (key, last_touched_at, may_be_deleted_after, level)
+        (id, key, last_touched_at, may_be_deleted_after, level)
       VALUES
         (
+          :id,
           :key,
           DATETIME('now'),
-          DATETIME('now') + ':delete_after_s second'::interval,
+          DATETIME('now', '+:delete_after_s seconds'),
           MAX(0.0,
             MIN(
               :capa,
@@ -70,7 +90,7 @@ module Pecorino::Sqlite
         level = MAX(0.0,
           MIN(
               :capa,
-              t.level + :fillup - (UNIXEPOCH(DATETIME('now')) - UNIXEPOCH(t.last_touched_at)) * :leak_rate
+              t.level + :fillup - (#{fractional_seconds_since_last_touched} * :leak_rate)
           )
         )
       RETURNING
