@@ -102,17 +102,5 @@ module Pecorino::Sqlite
     conn.uncached { conn.select_value(block_set_query) }
   end
 
-  private
-
-  def sanitize_sql_array_via_connection(connection, ...)
-    # TODO: terrible hack
-    sanitizer = begin
-      struct_class = Struct.new(:connection)
-      struct_class.send(:include, ActiveRecord::Sanitization::ClassMethods)
-      struct_class.new(connection)
-    end
-    sanitizer.sanitize_sql_array(...)
-  end
-
   extend self
 end
