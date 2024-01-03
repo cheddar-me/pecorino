@@ -5,30 +5,12 @@ module Pecorino::Sqlite
     include ActiveRecord::Sanitization::ClassMethods
   end
 
-  def fractional_seconds_since_last_touched
-    # SQLite is peculiar in that its datetime functions do not give fractrional seconds.
-    # The only way to get seconds with fractions is to use the '%f' format specifier
-    # with strftime(). Since we need subsecond-precision timestamps for Pecorino, we need
-    # to jump through some hoops to perform our calculations on fractional seconds. The hoops entail
-    # subtracting the whole seconds from the fractional seconds
-    t_last_touched = <<~SQL.strip
-      strftime('%s', t.last_touched_at) + (strftime('%f', t.last_touched_at) - floor(strftime('%f', t.last_touched_at)))
-    SQL
-
-    "(#{fractional_seconds_from_now} - #{t_last_touched})"
-  end
-
-  def fractional_seconds_from_now
-    <<~SQL.strip
-      strftime('%s') + (strftime('%f') - floor(strftime('%f')))
-    SQL
-  end
-
   def state(conn:, key:, capa:, leak_rate:)
     query_params = {
       key: key.to_s,
       capa: capa.to_f,
-      leak_rate: leak_rate.to_f
+      leak_rate: leak_rate.to_f,
+      now_s: Time.now.to_f # SQLite is in-process, so having a consistent time between servers is impossible
     }
     # The `level` of the bucket is what got stored at `last_touched_at` time, and we can
     # extrapolate from it to see how many tokens have leaked out since `last_touched_at` -
@@ -38,7 +20,7 @@ module Pecorino::Sqlite
         MAX(
           0.0, MIN(
             :capa,
-            t.level - (#{fractional_seconds_since_last_touched} * :leak_rate)
+            t.level - ((:now_s - t.last_touched_at) * :leak_rate)
           )
         )
       FROM 
@@ -65,6 +47,7 @@ module Pecorino::Sqlite
       capa: capa.to_f,
       delete_after_s: may_be_deleted_after_seconds,
       leak_rate: leak_rate.to_f,
+      now_s: Time.now.to_f,
       fillup: n_tokens.to_f,
       id: SecureRandom.uuid # SQLite3 does not autogenerate UUIDs
     }
@@ -76,7 +59,7 @@ module Pecorino::Sqlite
         (
           :id,
           :key,
-          strftime('%Y-%m-%d %H:%M:%f'), -- Precision loss must be avoided here as it is used for calculations
+          :now_s, -- Precision loss must be avoided here as it is used for calculations
           DATETIME('now', '+:delete_after_s seconds'), -- Precision loss is acceptable here
           MAX(0.0,
             MIN(
@@ -91,7 +74,7 @@ module Pecorino::Sqlite
         level = MAX(0.0,
           MIN(
               :capa,
-              t.level + :fillup - (#{fractional_seconds_since_last_touched} * :leak_rate)
+              t.level + :fillup - ((:now_s - t.last_touched_at) * :leak_rate)
           )
         )
       RETURNING
