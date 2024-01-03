@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # This offers just the leaky bucket implementation with fill control, but without the timed lock.
-# It does not raise any exceptions, it just tracks the state of a leaky bucket in Postgres.
+# It does not raise any exceptions, it just tracks the state of a leaky bucket in the database.
 #
 # Leak rate is specified directly in tokens per second, instead of specifying the block period.
 # The bucket level is stored and returned as a Float which allows for finer-grained measurement,
@@ -59,7 +59,7 @@ class Pecorino::LeakyBucket
     end
   end
 
-  # Creates a new LeakyBucket. The object controls 1 row in Postgres which is
+  # Creates a new LeakyBucket. The object controls 1 row in the database is
   # specific to the bucket key.
   #
   # @param key[String] the key for the bucket. The key also gets used
@@ -86,7 +86,7 @@ class Pecorino::LeakyBucket
   # @param n_tokens[Float]
   # @return [State] the state of the bucket after the operation
   def fillup(n_tokens)
-    capped_level_after_fillup, did_overflow = Pecorino::Postgres.add_tokens(conn: ActiveRecord::Base.connection, capa: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
+    capped_level_after_fillup, did_overflow = database_implementation.add_tokens(conn: ActiveRecord::Base.connection, capa: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
     State.new(capped_level_after_fillup, did_overflow)
   end
 
@@ -95,7 +95,7 @@ class Pecorino::LeakyBucket
   #
   # @return [State] the snapshotted state of the bucket at time of query
   def state
-    current_level, is_full = Pecorino::Postgres.state(conn: ActiveRecord::Base.connection, key: @key, capa: @capacity, leak_rate: @leak_rate)
+    current_level, is_full = database_implementation.state(conn: ActiveRecord::Base.connection, key: @key, capa: @capacity, leak_rate: @leak_rate)
     State.new(current_level, is_full)
   end
 
@@ -109,5 +109,11 @@ class Pecorino::LeakyBucket
   # @return [boolean]
   def able_to_accept?(n_tokens)
     (state.level + n_tokens) < @capacity
+  end
+
+  private
+
+  def database_implementation
+    Pecorino::Postgres
   end
 end
