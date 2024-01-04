@@ -1,11 +1,7 @@
 # frozen_string_literal: true
 
-module Pecorino::Sqlite
-  class Sanitizer < Struct.new(:connection)
-    include ActiveRecord::Sanitization::ClassMethods
-  end
-
-  def state(conn:, key:, capa:, leak_rate:)
+class Pecorino::Sqlite < Struct.new(:model_class)
+  def state(key:, capa:, leak_rate:)
     # With a server database, it is really important to use the clock of the database itself so
     # that concurrent requests will see consistent bucket level calculations. Since SQLite is
     # actually in-process, there is no point using DB functions - and besides, SQLite reduces
@@ -21,7 +17,7 @@ module Pecorino::Sqlite
     # The `level` of the bucket is what got stored at `last_touched_at` time, and we can
     # extrapolate from it to see how many tokens have leaked out since `last_touched_at` -
     # we don't need to UPDATE the value in the bucket here
-    sql = Sanitizer.new(conn).sanitize_sql_array([<<~SQL, query_params])
+    sql = model_class.sanitize_sql_array([<<~SQL, query_params])
       SELECT
         MAX(
           0.0, MIN(
@@ -37,11 +33,11 @@ module Pecorino::Sqlite
 
     # If the return value of the query is a NULL it means no such bucket exists,
     # so we assume the bucket is empty
-    current_level = conn.uncached { conn.select_value(sql) } || 0.0
+    current_level = model_class.connection.uncached { model_class.connection.select_value(sql) } || 0.0
     [current_level, capa - current_level.abs < 0.01]
   end
 
-  def add_tokens(conn:, key:, capa:, leak_rate:, n_tokens:)
+  def add_tokens(key:, capa:, leak_rate:, n_tokens:)
     # Take double the time it takes the bucket to empty under normal circumstances
     # until the bucket may be deleted.
     may_be_deleted_after_seconds = (capa.to_f / leak_rate.to_f) * 2.0
@@ -58,7 +54,7 @@ module Pecorino::Sqlite
       id: SecureRandom.uuid # SQLite3 does not autogenerate UUIDs
     }
 
-    sql = Sanitizer.new(conn).sanitize_sql_array([<<~SQL, query_params])
+    sql = model_class.sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_leaky_buckets AS t
         (id, key, last_touched_at, may_be_deleted_after, level)
       VALUES
@@ -93,24 +89,34 @@ module Pecorino::Sqlite
     # query as a repeat (since we use "select_one" for the RETURNING bit) and will not call into Postgres
     # correctly, thus the clock_timestamp() value would be frozen between calls. We don't want that here.
     # See https://stackoverflow.com/questions/73184531/why-would-postgres-clock-timestamp-freeze-inside-a-rails-unit-test
-    upserted = conn.uncached { conn.select_one(sql) }
+    upserted = model_class.connection.uncached { model_class.connection.select_one(sql) }
     capped_level_after_fillup, one_if_did_overflow = upserted.fetch("level"), upserted.fetch("did_overflow")
     [capped_level_after_fillup, one_if_did_overflow == 1]
   end
 
-  def set_block(conn:, key:, block_for:)
-    query_params = {key: key.to_s, block_for: block_for.to_f}
-    block_set_query = Sanitizer.new(conn).sanitize_sql_array([<<~SQL, query_params])
+  def set_block(key:, block_for:)
+    query_params = {id: SecureRandom.uuid, key: key.to_s, block_for: block_for.to_f, now_s: Time.now.to_f}
+    block_set_query = model_class.sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_blocks AS t
-        (key, blocked_until)
+        (id, key, blocked_until)
       VALUES
-        (:key, DATETIME() + ':block_for seconds'::interval)
+        (:id, :key, :now_s + :block_for)
       ON CONFLICT (key) DO UPDATE SET
         blocked_until = MAX(EXCLUDED.blocked_until, t.blocked_until)
       RETURNING blocked_until;
     SQL
-    conn.uncached { conn.select_value(block_set_query) }
+    blocked_until_s = model_class.connection.uncached { model_class.connection.select_value(block_set_query) }
+    Time.at(blocked_until_s)
   end
 
-  extend self
+  def blocked_until(key:)
+    # This query is database-agnostic, so it is not in the various database modules
+    block_check_query = model_class.sanitize_sql_array([<<~SQL, {key: key}])
+      SELECT
+        blocked_until
+      FROM pecorino_blocks
+      WHERE key = :key AND blocked_until >= DATETIME('now') LIMIT 1
+    SQL
+    model_class.connection.uncached { model_class.connection.select_value(block_check_query) }
+  end
 end

@@ -86,7 +86,7 @@ class Pecorino::LeakyBucket
   # @param n_tokens[Float]
   # @return [State] the state of the bucket after the operation
   def fillup(n_tokens)
-    capped_level_after_fillup, did_overflow = database_implementation.add_tokens(conn: ActiveRecord::Base.connection, capa: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
+    capped_level_after_fillup, did_overflow = database_implementation.add_tokens(capa: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
     State.new(capped_level_after_fillup, did_overflow)
   end
 
@@ -95,7 +95,7 @@ class Pecorino::LeakyBucket
   #
   # @return [State] the snapshotted state of the bucket at time of query
   def state
-    current_level, is_full = database_implementation.state(conn: ActiveRecord::Base.connection, key: @key, capa: @capacity, leak_rate: @leak_rate)
+    current_level, is_full = database_implementation.state(key: @key, capa: @capacity, leak_rate: @leak_rate)
     State.new(current_level, is_full)
   end
 
@@ -114,12 +114,13 @@ class Pecorino::LeakyBucket
   private
 
   def database_implementation
-    adapter_name = ActiveRecord::Base.connection.adapter_name
+    model_class = ActiveRecord::Base
+    adapter_name = model_class.connection.adapter_name
     case adapter_name
     when /postgres/i
-      Pecorino::Postgres
+      Pecorino::Postgres.new(ActiveRecord::Base)
     when /sqlite/i
-      Pecorino::Sqlite
+      Pecorino::Sqlite.new(ActiveRecord::Base)
     else
       raise "Pecorino does not support #{adapter_name} just yet"
     end
