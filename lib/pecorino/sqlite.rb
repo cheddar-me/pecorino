@@ -114,8 +114,10 @@ class Pecorino::Sqlite < Struct.new(:model_class)
     block_check_query = model_class.sanitize_sql_array([<<~SQL, {key: key}])
       SELECT
         blocked_until
-      FROM pecorino_blocks
-      WHERE key = :key AND blocked_until >= DATETIME('now') LIMIT 1
+      FROM
+        pecorino_blocks
+      WHERE
+        key = :key AND blocked_until >= DATETIME('now') LIMIT 1
     SQL
     model_class.connection.uncached { model_class.connection.select_value(block_check_query) }
   end
