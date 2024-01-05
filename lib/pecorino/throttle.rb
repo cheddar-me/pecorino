@@ -60,7 +60,7 @@ class Pecorino::Throttle
   # @param n_tokens[Float]
   # @return [boolean]
   def able_to_accept?(n_tokens = 1)
-    database_implementation.blocked_until(key: @key).nil? && @bucket.able_to_accept?(n_tokens)
+    Pecorino.adapter.blocked_until(key: @key).nil? && @bucket.able_to_accept?(n_tokens)
   end
 
   # Register that a request is being performed. Will raise Throttled
@@ -97,29 +97,14 @@ class Pecorino::Throttle
   #
   # @return [State] the state of the throttle after filling up the leaky bucket / trying to pass the block
   def request(n = 1)
-    existing_blocked_until = database_implementation.blocked_until(key: @key)
+    existing_blocked_until = Pecorino.adapter.blocked_until(key: @key)
     return State.new(existing_blocked_until.utc) if existing_blocked_until
 
     # Topup the leaky bucket
     return State.new(nil) unless @bucket.fillup(n.to_f).full?
 
     # and set the block if we reached it
-    fresh_blocked_until = database_implementation.set_block(key: @key, block_for: @block_for)
+    fresh_blocked_until = Pecorino.adapter.set_block(key: @key, block_for: @block_for)
     State.new(fresh_blocked_until.utc)
-  end
-
-  private
-
-  def database_implementation
-    model_class = ActiveRecord::Base
-    adapter_name = model_class.connection.adapter_name
-    case adapter_name
-    when /postgres/i
-      Pecorino::Postgres.new(ActiveRecord::Base)
-    when /sqlite/i
-      Pecorino::Sqlite.new(ActiveRecord::Base)
-    else
-      raise "Pecorino does not support #{adapter_name} just yet"
-    end
   end
 end

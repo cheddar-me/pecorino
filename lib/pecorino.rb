@@ -51,4 +51,20 @@ module Pecorino
     active_record_schema.add_index :pecorino_blocks, [:key], unique: true
     active_record_schema.add_index :pecorino_blocks, [:blocked_until]
   end
+
+  # Returns the database implementation for setting the values atomically. Since the implementation
+  # differs per database, this method will return a different adapter depending on which database is
+  # being used
+  def self.adapter
+    model_class = ActiveRecord::Base
+    adapter_name = model_class.connection.adapter_name
+    case adapter_name
+    when /postgres/i
+      Pecorino::Postgres.new(model_class)
+    when /sqlite/i
+      Pecorino::Sqlite.new(model_class)
+    else
+      raise "Pecorino does not support #{adapter_name} just yet"
+    end
+  end
 end
