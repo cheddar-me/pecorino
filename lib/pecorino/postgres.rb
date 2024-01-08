@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class Pecorino::Postgres < Struct.new(:model_class)
+Pecorino::Postgres = Struct.new(:model_class) do
   def state(key:, capa:, leak_rate:)
     query_params = {
       key: key.to_s,
