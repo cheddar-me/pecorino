@@ -110,7 +110,6 @@ class Pecorino::Sqlite < Struct.new(:model_class)
   end
 
   def blocked_until(key:)
-    # This query is database-agnostic, so it is not in the various database modules
     now_s = Time.now.to_f
     block_check_query = model_class.sanitize_sql_array([<<~SQL, {now_s: now_s, key: key}])
       SELECT

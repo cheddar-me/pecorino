@@ -99,7 +99,6 @@ class Pecorino::Postgres < Struct.new(:model_class)
   end
 
   def blocked_until(key:)
-    # This query is database-agnostic, so it is not in the various database modules
     block_check_query = model_class.sanitize_sql_array([<<~SQL, key])
       SELECT blocked_until FROM pecorino_blocks WHERE key = ? AND blocked_until >= NOW() LIMIT 1
     SQL
