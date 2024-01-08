@@ -2,7 +2,7 @@
 
 Pecorino is a rate limiter based on the concept of leaky buckets. It uses your DB as the storage backend for the throttles. It is compact, easy to install, and does not require additional infrastructure. The approach used by Pecorino has been previously used by [prorate](https://github.com/WeTransfer/prorate) with Redis, and that approach has proven itself.
 
-Pecorino is designed to integrate seamlessly into any Rails application using a Postgres database (at the moment there is no MySQL support, we would be delighted if you could add it).
+Pecorino is designed to integrate seamlessly into any Rails application using a PostgreSQL or SQLite database (at the moment there is no MySQL support, we would be delighted if you could add it).
 
 If you would like to know more about the leaky bucket algorithm: [this article](http://live.julik.nl/2022/08/the-unreasonable-effectiveness-of-leaky-buckets) or the [Wikipedia article](https://en.wikipedia.org/wiki/Leaky_bucket) are both good starting points.
 
@@ -87,7 +87,7 @@ We recommend running the following bit of code every couple of hours (via cron o
 Pecorino.prune!
 ```
 
-## Using unlogged tables for reduced replication load
+## Using unlogged tables for reduced replication load (PostgreSQL)
 
 Throttles and leaky buckets are transient resources. If you are using Postgres replication, it might be prudent to set the Pecorino tables to `UNLOGGED` which will exclude them from replication - and save you bandwidth and storage on your RR. To do so, add the following statements to your migration:
 

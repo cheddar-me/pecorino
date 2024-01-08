@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-class PecorinoThrottleTest < ActiveSupport::TestCase
+class ThrottlePostgresTest < ActiveSupport::TestCase
   def random_leaky_bucket_name(random: Random.new)
     (1..32).map do
       # bytes 97 to 122 are printable lowercase a-z
@@ -10,24 +10,12 @@ class PecorinoThrottleTest < ActiveSupport::TestCase
     end.pack("C*")
   end
 
-  setup do
-    seed_db_name = Random.new(Minitest.seed).hex(4)
-    ActiveRecord::Migration.verbose = false
-    ActiveRecord::Base.establish_connection(adapter: "postgresql", database: "postgres")
-    ActiveRecord::Base.connection.create_database("pecorino_tests_%s" % seed_db_name, charset: :unicode)
-    ActiveRecord::Base.connection.close
-    ActiveRecord::Base.establish_connection(adapter: "postgresql", encoding: "unicode", database: "pecorino_tests_%s" % seed_db_name)
-
-    ActiveRecord::Schema.define(version: 1) do |via_definer|
-      Pecorino.create_tables(via_definer)
-    end
+  def setup
+    create_postgres_database
   end
 
-  teardown do
-    seed_db_name = Random.new(Minitest.seed).hex(4)
-    ActiveRecord::Base.connection.close
-    ActiveRecord::Base.establish_connection(adapter: "postgresql", database: "postgres")
-    ActiveRecord::Base.connection.drop_database("pecorino_tests_%s" % seed_db_name)
+  def teardown
+    drop_postgres_database
   end
 
   test "throttles using request!() and blocks" do
