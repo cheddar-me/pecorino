@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 Pecorino::Sqlite = Struct.new(:model_class) do
-  def state(key:, capa:, leak_rate:)
+  def state(key:, capacity:, leak_rate:)
     # With a server database, it is really important to use the clock of the database itself so
     # that concurrent requests will see consistent bucket level calculations. Since SQLite is
     # actually in-process, there is no point using DB functions - and besides, SQLite reduces
@@ -10,7 +10,7 @@ Pecorino::Sqlite = Struct.new(:model_class) do
     # much but saves us on writing some gnarly SQL to have SQLite produce consistent precise timestamps.
     query_params = {
       key: key.to_s,
-      capa: capa.to_f,
+      capacity: capacity.to_f,
       leak_rate: leak_rate.to_f,
       now_s: Time.now.to_f
     }
@@ -21,7 +21,7 @@ Pecorino::Sqlite = Struct.new(:model_class) do
       SELECT
         MAX(
           0.0, MIN(
-            :capa,
+            :capacity,
             t.level - ((:now_s - t.last_touched_at) * :leak_rate)
           )
         )
@@ -34,19 +34,19 @@ Pecorino::Sqlite = Struct.new(:model_class) do
     # If the return value of the query is a NULL it means no such bucket exists,
     # so we assume the bucket is empty
     current_level = model_class.connection.uncached { model_class.connection.select_value(sql) } || 0.0
-    [current_level, capa - current_level.abs < 0.01]
+    [current_level, capacity - current_level.abs < 0.01]
   end
 
-  def add_tokens(key:, capa:, leak_rate:, n_tokens:)
+  def add_tokens(key:, capacity:, leak_rate:, n_tokens:)
     # Take double the time it takes the bucket to empty under normal circumstances
     # until the bucket may be deleted.
-    may_be_deleted_after_seconds = (capa.to_f / leak_rate.to_f) * 2.0
+    may_be_deleted_after_seconds = (capacity.to_f / leak_rate.to_f) * 2.0
 
     # Create the leaky bucket if it does not exist, and update
     # to the new level, taking the leak rate into account - if the bucket exists.
     query_params = {
       key: key.to_s,
-      capa: capa.to_f,
+      capacity: capacity.to_f,
       delete_after_s: may_be_deleted_after_seconds,
       leak_rate: leak_rate.to_f,
       now_s: Time.now.to_f, # See above as to why we are using a time value passed in
@@ -65,7 +65,7 @@ Pecorino::Sqlite = Struct.new(:model_class) do
           DATETIME('now', '+:delete_after_s seconds'), -- Precision loss is acceptable here
           MAX(0.0,
             MIN(
-              :capa,
+              :capacity,
               :fillup
             )
           )
@@ -75,14 +75,14 @@ Pecorino::Sqlite = Struct.new(:model_class) do
         may_be_deleted_after = EXCLUDED.may_be_deleted_after,
         level = MAX(0.0,
           MIN(
-              :capa,
+              :capacity,
               t.level + :fillup - ((:now_s - t.last_touched_at) * :leak_rate)
           )
         )
       RETURNING
         level,
         -- Compare level to the capacity inside the DB so that we won't have rounding issues
-        level >= :capa AS did_overflow
+        level >= :capacity AS did_overflow
     SQL
 
     # Note the use of .uncached here. The AR query cache will actually see our

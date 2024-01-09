@@ -86,7 +86,7 @@ class Pecorino::LeakyBucket
   # @param n_tokens[Float]
   # @return [State] the state of the bucket after the operation
   def fillup(n_tokens)
-    capped_level_after_fillup, did_overflow = Pecorino.adapter.add_tokens(capa: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
+    capped_level_after_fillup, did_overflow = Pecorino.adapter.add_tokens(capacity: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
     State.new(capped_level_after_fillup, did_overflow)
   end
 
@@ -95,7 +95,7 @@ class Pecorino::LeakyBucket
   #
   # @return [State] the snapshotted state of the bucket at time of query
   def state
-    current_level, is_full = Pecorino.adapter.state(key: @key, capa: @capacity, leak_rate: @leak_rate)
+    current_level, is_full = Pecorino.adapter.state(key: @key, capacity: @capacity, leak_rate: @leak_rate)
     State.new(current_level, is_full)
   end
 
