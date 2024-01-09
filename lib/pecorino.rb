@@ -1,11 +1,17 @@
 # frozen_string_literal: true
 
+require "active_support/concern"
+require "active_record/sanitization"
+
 require_relative "pecorino/version"
 require_relative "pecorino/leaky_bucket"
 require_relative "pecorino/throttle"
 require_relative "pecorino/railtie" if defined?(Rails::Railtie)
 
 module Pecorino
+  autoload :Postgres, "pecorino/postgres"
+  autoload :Sqlite, "pecorino/sqlite"
+
   # Deletes stale leaky buckets and blocks which have expired. Run this method regularly to
   # avoid accumulating too many unused rows in your tables.
   #
@@ -45,5 +51,21 @@ module Pecorino
     end
     active_record_schema.add_index :pecorino_blocks, [:key], unique: true
     active_record_schema.add_index :pecorino_blocks, [:blocked_until]
+  end
+
+  # Returns the database implementation for setting the values atomically. Since the implementation
+  # differs per database, this method will return a different adapter depending on which database is
+  # being used
+  def self.adapter
+    model_class = ActiveRecord::Base
+    adapter_name = model_class.connection.adapter_name
+    case adapter_name
+    when /postgres/i
+      Pecorino::Postgres.new(model_class)
+    when /sqlite/i
+      Pecorino::Sqlite.new(model_class)
+    else
+      raise "Pecorino does not support #{adapter_name} just yet"
+    end
   end
 end
