@@ -1,4 +1,4 @@
-## [Unreleased]
+## [0.2.0] - 2024-01-09
 
 - [Add support for SQLite](https://github.com/cheddar-me/pecorino/pull/9)
 - [Use comparisons in SQL to determine whether the leaky bucket did overflow](https://github.com/cheddar-me/pecorino/pull/8)
