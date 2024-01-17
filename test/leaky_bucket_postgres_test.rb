@@ -33,6 +33,33 @@ class LeakyBucketPostgresTest < ActiveSupport::TestCase
     end
   end
 
+  test "exposes the parameters via reader methods" do
+    bucket = Pecorino::LeakyBucket.new(key: "some-bk", leak_rate: 1.1, capacity: 15)
+    assert_equal bucket.key, "some-bk"
+    assert_equal bucket.leak_rate, 1.1
+    assert_equal bucket.capacity, 15.0
+  end
+
+  test "allows either of leak_rate or over_time to be used" do
+    bucket = Pecorino::LeakyBucket.new(key: Random.uuid, leak_rate: 1.1, capacity: 15)
+    bucket.fillup(20)
+    sleep 0.2
+    assert_in_delta bucket.state.level, 14.77, 0.1
+
+    bucket = Pecorino::LeakyBucket.new(key: Random.uuid, over_time: 13.6, capacity: 15)
+    bucket.fillup(20)
+    sleep 0.2
+    assert_in_delta bucket.state.level, 14.77, 0.1
+
+    assert_raises(ArgumentError) do
+      Pecorino::LeakyBucket.new(key: Random.uuid, over_time: 13.6, leak_rate: 1.1, capacity: 15)
+    end
+
+    assert_raises(ArgumentError) do
+      Pecorino::LeakyBucket.new(key: Random.uuid, capacity: 15)
+    end
+  end
+
   test "does not allow a bucket to be created with a negative value" do
     bucket = Pecorino::LeakyBucket.new(key: Random.uuid, leak_rate: 1.1, capacity: 15)
     assert_in_delta bucket.state.level, 0, 0.0001

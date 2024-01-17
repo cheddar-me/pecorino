@@ -1,3 +1,6 @@
+- Allow `over_time` in addition to `leak_rate`, which is a more intuitive parameter to tweak
+- Set default `block_for` to the time it takes the bucket to leak out completely instead of 30 seconds
+
 ## [0.2.0] - 2024-01-09
 
 - [Add support for SQLite](https://github.com/cheddar-me/pecorino/pull/9)
