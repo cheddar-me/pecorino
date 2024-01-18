@@ -58,7 +58,7 @@ return render :capacity_exceeded unless throttle.able_to_accept?
 If you are dealing with a metered resource (like throughput, money, amount of storage...) you can supply the number of tokens to either `request!` or `able_to_accept?` to indicate the desired top-up of the leaky bucket. For example, if you are maintaining user wallets and want to ensure no more than 100 dollars may be taken from the wallet within a certain amount of time, you can do it like so:
 
 ```ruby
-throttle = Pecorino::Throttle.new(key: "wallet_t_#{current_user.id}", leak_rate: 100 / 60.0 / 60.0, capacity: 100, block_for: 60*60*3)
+throttle = Pecorino::Throttle.new(key: "wallet_t_#{current_user.id}", over_time_: 1.hour, capacity: 100, block_for: 60*60*3)
 throttle.request!(20) # Attempt to withdraw 20 dollars
 throttle.request!(20) # Attempt to withdraw 20 dollars more
 throttle.request!(20) # Attempt to withdraw 20 dollars more
