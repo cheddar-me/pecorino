@@ -1,3 +1,5 @@
+## [0.3.0] - 2024-01-18
+
 - Allow `over_time` in addition to `leak_rate`, which is a more intuitive parameter to tweak
 - Set default `block_for` to the time it takes the bucket to leak out completely instead of 30 seconds
 
