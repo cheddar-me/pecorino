@@ -59,21 +59,40 @@ class Pecorino::LeakyBucket
     end
   end
 
+  # The key (name) of the leaky bucket
+  #   @return [String]
+  attr_reader :key
+
+  # The leak rate (tokens per second) of the bucket
+  #   @return [Float]
+  attr_reader :leak_rate
+
+  # The capacity of the bucket in tokens
+  #   @return [Float]
+  attr_reader :capacity
+
   # Creates a new LeakyBucket. The object controls 1 row in the database is
   # specific to the bucket key.
   #
   # @param key[String] the key for the bucket. The key also gets used
   #   to derive locking keys, so that operations on a particular bucket
   #   are always serialized.
-  # @param leak_rate[Float] the leak rate of the bucket, in tokens per second
+  # @param leak_rate[Float] the leak rate of the bucket, in tokens per second.
+  #   Either `leak_rate` or `over_time` can be used, but not both.
+  # @param over_time[#to_f] over how many seconds the bucket will leak out to 0 tokens.
+  #   The value is assumed to be the number of seconds
+  #   - or a duration which returns the number of seconds from `to_f`.
+  #   Either `leak_rate` or `over_time` can be used, but not both.
   # @param capacity[Numeric] how many tokens is the bucket capped at.
   #   Filling up the bucket using `fillup()` will add to that number, but
   #   the bucket contents will then be capped at this value. So with
   #   bucket_capacity set to 12 and a `fillup(14)` the bucket will reach the level
   #   of 12, and will then immediately start leaking again.
-  def initialize(key:, leak_rate:, capacity:)
+  def initialize(key:, capacity:, leak_rate: nil, over_time: nil)
+    raise ArgumentError, "Either leak_rate: or over_time: must be specified" if leak_rate.nil? && over_time.nil?
+    raise ArgumentError, "Either leak_rate: or over_time: may be specified, but not both" if leak_rate && over_time
+    @leak_rate = leak_rate || (over_time.to_f / capacity)
     @key = key
-    @leak_rate = leak_rate.to_f
     @capacity = capacity.to_f
   end
 

@@ -25,7 +25,7 @@ And then execute:
 Once the installation is done you can use Pecorino to start defining your throttles. Imagine you have a resource called `vault` and you want to limit the number of updates to it to 5 per second. To achieve that, instantiate a new `Throttle` in your controller or job code, and then trigger it using `Throttle#request!`. A call to `request!` registers 1 token getting added to the bucket. If the bucket is full, or the throttle is currently in "block" mode (has recently been triggered), a `Pecorino::Throttle::Throttled` exception will be raised.
 
 ```ruby
-throttle = Pecorino::Throttle.new(key: "vault", leak_rate: 5, capacity: 5)
+throttle = Pecorino::Throttle.new(key: "vault", over_time: 1.second, capacity: 5)
 throttle.request!
 ```
 In a Rails controller you can then rescue from this exception to render the appropriate response:
@@ -58,7 +58,7 @@ return render :capacity_exceeded unless throttle.able_to_accept?
 If you are dealing with a metered resource (like throughput, money, amount of storage...) you can supply the number of tokens to either `request!` or `able_to_accept?` to indicate the desired top-up of the leaky bucket. For example, if you are maintaining user wallets and want to ensure no more than 100 dollars may be taken from the wallet within a certain amount of time, you can do it like so:
 
 ```ruby
-throttle = Pecorino::Throttle.new(key: "wallet_t_#{current_user.id}", leak_rate: 100 / 60.0 / 60.0, capacity: 100, block_for: 60*60*3)
+throttle = Pecorino::Throttle.new(key: "wallet_t_#{current_user.id}", over_time_: 1.hour, capacity: 100, block_for: 60*60*3)
 throttle.request!(20) # Attempt to withdraw 20 dollars
 throttle.request!(20) # Attempt to withdraw 20 dollars more
 throttle.request!(20) # Attempt to withdraw 20 dollars more

@@ -43,13 +43,14 @@ class Pecorino::Throttle
   end
 
   # @param key[String] the key for both the block record and the leaky bucket
-  # @param block_for[Numeric] the number of seconds to block any further requests for
+  # @param block_for[Numeric] the number of seconds to block any further requests for. Defaults to time it takes
+  #   the bucket to leak out to the level of 0
   # @param leaky_bucket_options Options for `Pecorino::LeakyBucket.new`
   # @see PecorinoLeakyBucket.new
-  def initialize(key:, block_for: 30, **)
-    @key = key.to_s
-    @block_for = block_for.to_f
+  def initialize(key:, block_for: nil, **)
     @bucket = Pecorino::LeakyBucket.new(key:, **)
+    @key = key.to_s
+    @block_for = block_for ? block_for.to_f : (@bucket.capacity / @bucket.leak_rate)
   end
 
   # Tells whether the throttle will let this number of requests pass without raising

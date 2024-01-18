@@ -46,6 +46,12 @@ class ThrottlePostgresTest < ActiveSupport::TestCase
     end
   end
 
+  test "allows the block_for parameter to be omitted" do
+    assert_nothing_raised do
+      Pecorino::Throttle.new(key: random_leaky_bucket_name, over_time: 1, capacity: 30)
+    end
+  end
+
   test "still throttles using request() without raising exceptions" do
     throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
 
