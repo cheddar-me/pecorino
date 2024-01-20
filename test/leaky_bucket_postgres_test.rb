@@ -96,7 +96,7 @@ class LeakyBucketPostgresTest < ActiveSupport::TestCase
     assert_in_delta bucket.state.level, 0, 0.1
   end
 
-  test "allows conditional fillup using fillup_conditionally" do
+  test "allows conditional fillup" do
     bucket = Pecorino::LeakyBucket.new(key: Random.uuid, over_time: 1.0, capacity: 1.0)
 
     counter = 0
@@ -117,5 +117,6 @@ class LeakyBucketPostgresTest < ActiveSupport::TestCase
 
     try_fillup.call(0.3, 1.0, true)
     try_fillup.call(-2, 0.0, true) # A negative fillup is permitted since it will never take the bucket above capacity
+    try_fillup.call(1.0, 1.0, true) # Filling up in one step should be permitted
   end
 end
