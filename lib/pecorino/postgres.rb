@@ -102,7 +102,8 @@ Pecorino::Postgres = Struct.new(:model_class) do
     sql = model_class.sanitize_sql_array([<<~SQL, query_params])
       WITH pre AS (
         SELECT
-          GREATEST(0.0, LEAST(:capacity, level - (EXTRACT(EPOCH FROM (clock_timestamp() - last_touched_at)) * :leak_rate))) AS level_after_leaking
+          GREATEST(0.0, level - (EXTRACT(EPOCH FROM (clock_timestamp() - last_touched_at)) * :leak_rate)) AS level_post,
+          GREATEST(0.0, level + :fillup - (EXTRACT(EPOCH FROM (clock_timestamp() - last_touched_at)) * :leak_rate)) AS level_post_with_uncapped_fillup
         FROM pecorino_leaky_buckets
         WHERE key = :key
       )
@@ -114,34 +115,29 @@ Pecorino::Postgres = Struct.new(:model_class) do
           clock_timestamp(),
           clock_timestamp() + ':delete_after_s second'::interval,
           GREATEST(0.0,
-            LEAST(
-              :capacity,
-              :fillup
-            )
+            (CASE WHEN :fillup > :capacity THEN 0.0 ELSE :fillup END)
           )
         )
       ON CONFLICT (key) DO UPDATE SET
         last_touched_at = EXCLUDED.last_touched_at,
         may_be_deleted_after = EXCLUDED.may_be_deleted_after,
-        level = CASE WHEN
-          ((SELECT level_after_leaking FROM pre) + :fillup) > :capacity THEN (SELECT level_after_leaking FROM pre)
+        level = CASE WHEN (SELECT level_post_with_uncapped_fillup FROM pre) <= :capacity THEN
+          (SELECT level_post_with_uncapped_fillup FROM pre)
         ELSE
-          GREATEST(0.0, LEAST(:capacity, (SELECT level_after_leaking FROM pre) + :fillup))
+          (SELECT level_post FROM pre)
         END
       RETURNING
-        level,
-        -- Compare level to the capacity inside the DB so that we won't have rounding issues
-        level >= :capacity AS at_capacity,
-        level != GREATEST(0.0, (SELECT level_after_leaking FROM pre)) AS did_accept
+        COALESCE((SELECT level_post FROM pre), 0.0) AS level_before,
+        level AS level_after
     SQL
 
-    # Note the use of .uncached here. The AR query cache will actually see our
-    # query as a repeat (since we use "select_one" for the RETURNING bit) and will not call into Postgres
-    # correctly, thus the clock_timestamp() value would be frozen between calls. We don't want that here.
-    # See https://stackoverflow.com/questions/73184531/why-would-postgres-clock-timestamp-freeze-inside-a-rails-unit-test
+    # Re .uncached - https://stackoverflow.com/questions/73184531/why-would-postgres-clock-timestamp-freeze-inside-a-rails-unit-test
     upserted = model_class.connection.uncached { model_class.connection.select_one(sql) }
-    capped_level, at_capacity, did_accept = upserted.fetch("level"), upserted.fetch("at_capacity"), upserted.fetch("did_accept")
-    [capped_level, at_capacity, did_accept]
+    warn upserted.inspect
+
+    level_after = upserted.fetch("level_after")
+    level_before = upserted.fetch("level_before")
+    [level_after, level_after >= capacity, level_after != level_before]
   end
 
   def set_block(key:, block_for:)
