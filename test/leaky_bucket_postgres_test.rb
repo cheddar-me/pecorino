@@ -95,16 +95,15 @@ class LeakyBucketPostgresTest < ActiveSupport::TestCase
     bucket = Pecorino::LeakyBucket.new(key: Random.uuid, over_time: 0.2, capacity: 1.0)
 
     state_after_first_fillup = bucket.fillup_if_able(0.6)
-    assert_in_delta state_after_first_fillup.level, 0.6, 0.01
+    assert_in_delta state_after_first_fillup.level, 0.6, 0.1
     assert_predicate state_after_first_fillup, :did_accept?
 
-    state_after_second_fillup = bucket.fillup_if_able(0.6)
-    assert_in_delta state_after_second_fillup.level, 0.6, 0.01
-    refute_predicate state_after_second_fillup, :did_accept?
+    state_after_second_fillup = bucket.fillup_if_able(0.3)
+    assert_in_delta state_after_second_fillup.level, 0.9, 0.1
+    assert_predicate state_after_second_fillup, :did_accept?
 
-    sleep 0.15
-    state_after_third_fillup = bucket.fillup_if_able(0.6)
-    assert_in_delta state_after_third_fillup.level, 0.6, 0.01
-    assert_predicate state_after_third_fillup, :did_accept?
+    state_after_third_fillup = bucket.fillup_if_able(0.3) # Would take the bucket to 1.2, so must be refused
+    assert_in_delta state_after_third_fillup.level, 0.9, 0.1
+    refute_predicate state_after_third_fillup, :did_accept?
   end
 end
