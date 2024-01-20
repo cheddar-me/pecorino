@@ -19,7 +19,7 @@ class ThrottlePostgresTest < ActiveSupport::TestCase
   end
 
   test "throttles using request!() and blocks" do
-    throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
+    throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, over_time: 1.0, capacity: 30)
 
     29.times do
       throttle.request!
@@ -30,7 +30,7 @@ class ThrottlePostgresTest < ActiveSupport::TestCase
       loop { throttle.request! }
     end
 
-    assert_in_delta err.retry_after, 3, 0.5
+    assert_in_delta err.retry_after, 1, 0.1
     sleep 0.5
 
     # Ensure we are still throttled
@@ -38,9 +38,9 @@ class ThrottlePostgresTest < ActiveSupport::TestCase
       throttle.request!
     end
     assert_equal throttle, err.throttle
-    assert_in_delta err.retry_after, 2.5, 0.5
+    assert_in_delta err.retry_after, 1, 0.1
 
-    sleep(3.05)
+    sleep(1)
     assert_nothing_raised do
       throttle.request!
     end

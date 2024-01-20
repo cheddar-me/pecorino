@@ -1,3 +1,7 @@
+- Improve YARD documentation
+- Allow "conditional fillup" - only add tokens to the leaky bucket if the bucket has enough space
+- Fix `over_time` leading to incorrect `leak_rate`. The divider/divisor were swapped, leading to the inverse leak rate getting computed.
+
 ## [0.3.0] - 2024-01-18
 
 - Allow `over_time` in addition to `leak_rate`, which is a more intuitive parameter to tweak
