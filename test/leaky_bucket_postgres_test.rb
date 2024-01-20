@@ -40,6 +40,11 @@ class LeakyBucketPostgresTest < ActiveSupport::TestCase
     assert_equal bucket.capacity, 15.0
   end
 
+  test "translates over_time into an appropriate leak_rate at instantiation" do
+    throttle = Pecorino::LeakyBucket.new(key: Random.uuid, over_time: 10, capacity: 20)
+    assert_in_delta 2.0, throttle.leak_rate, 0.01
+  end
+
   test "allows either of leak_rate or over_time to be used" do
     bucket = Pecorino::LeakyBucket.new(key: Random.uuid, leak_rate: 1.1, capacity: 15)
     bucket.fillup(20)

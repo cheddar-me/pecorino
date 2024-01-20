@@ -96,7 +96,7 @@ class Pecorino::LeakyBucket
   def initialize(key:, capacity:, leak_rate: nil, over_time: nil)
     raise ArgumentError, "Either leak_rate: or over_time: must be specified" if leak_rate.nil? && over_time.nil?
     raise ArgumentError, "Either leak_rate: or over_time: may be specified, but not both" if leak_rate && over_time
-    @leak_rate = leak_rate || (over_time.to_f / capacity)
+    @leak_rate = leak_rate || (capacity / over_time.to_f)
     @key = key
     @capacity = capacity.to_f
   end
