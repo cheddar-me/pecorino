@@ -133,7 +133,6 @@ Pecorino::Postgres = Struct.new(:model_class) do
 
     # Re .uncached - https://stackoverflow.com/questions/73184531/why-would-postgres-clock-timestamp-freeze-inside-a-rails-unit-test
     upserted = model_class.connection.uncached { model_class.connection.select_one(sql) }
-    warn upserted.inspect
 
     level_after = upserted.fetch("level_after")
     level_before = upserted.fetch("level_before")

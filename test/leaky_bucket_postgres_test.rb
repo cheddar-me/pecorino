@@ -98,7 +98,7 @@ class LeakyBucketPostgresTest < ActiveSupport::TestCase
     try_fillup = ->(fillup_by, should_have_reached_level, should_have_accepted) {
       counter += 1
       state = bucket.fillup_if_able(fillup_by)
-      assert_equal should_have_accepted, state.did_accept?, "Update #{counter} did_accept should be #{should_have_accepted}"
+      assert_equal should_have_accepted, state.accepted?, "Update #{counter} did_accept should be #{should_have_accepted}"
       assert_in_delta should_have_reached_level, state.level, 0.1
     }
 
