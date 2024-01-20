@@ -94,16 +94,17 @@ class LeakyBucketPostgresTest < ActiveSupport::TestCase
   test "allows conditional fillup using fillup_if_able" do
     bucket = Pecorino::LeakyBucket.new(key: Random.uuid, over_time: 0.2, capacity: 1.0)
 
-    state_after_first_fillup = bucket.fillup_if_able(0.6)
-    assert_in_delta state_after_first_fillup.level, 0.6, 0.1
-    assert_predicate state_after_first_fillup, :did_accept?
+    try_fillup = ->(fillup_by, should_have_reached_level, should_have_accepted) {
+      state = bucket.fillup_if_able(fillup_by)
+      assert_equal should_have_accepted, state.did_accept?
+      assert_in_delta should_have_reached_level, state.level, 0.1
+    }
 
-    state_after_second_fillup = bucket.fillup_if_able(0.3)
-    assert_in_delta state_after_second_fillup.level, 0.9, 0.1
-    assert_predicate state_after_second_fillup, :did_accept?
-
-    state_after_third_fillup = bucket.fillup_if_able(0.3) # Would take the bucket to 1.2, so must be refused
-    assert_in_delta state_after_third_fillup.level, 0.9, 0.1
-    refute_predicate state_after_third_fillup, :did_accept?
+    try_fillup.(0.3, 0.3, true)
+    try_fillup.(0.3, 0.6, true)
+    try_fillup.(0.3, 0.9, true)
+    try_fillup.(0.3, 0.9, false) # Would take the bucket to 1.2, so must be rejected
+    sleep(0.1 * 0.2) # Wait as long as it would take the bucket to go from 0.9 to 0.7 or below
+    try_fillup.(0.3, 1.0, true) # Would take the bucket to 1.2, so must be rejected
   end
 end
