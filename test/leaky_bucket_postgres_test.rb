@@ -102,15 +102,15 @@ class LeakyBucketPostgresTest < ActiveSupport::TestCase
       assert_in_delta should_have_reached_level, state.level, 0.1
     }
 
-    try_fillup.(1.1, 0.0, false) # Oversized fillup must be refused outright
-    try_fillup.(0.3, 0.3, true)
-    try_fillup.(0.3, 0.6, true)
-    try_fillup.(0.3, 0.9, true)
-    try_fillup.(0.3, 0.9, false) # Would take the bucket to 1.2, so must be rejected
+    try_fillup.call(1.1, 0.0, false) # Oversized fillup must be refused outright
+    try_fillup.call(0.3, 0.3, true)
+    try_fillup.call(0.3, 0.6, true)
+    try_fillup.call(0.3, 0.9, true)
+    try_fillup.call(0.3, 0.9, false) # Would take the bucket to 1.2, so must be rejected
 
     sleep(0.2) # Leak out 0.2 tokens
 
-    try_fillup.(0.3, 1.0, true)
-    try_fillup.(-2, 0.0, true) # A negative fillup is permitted since it will never take the bucket above capacity
+    try_fillup.call(0.3, 1.0, true)
+    try_fillup.call(-2, 0.0, true) # A negative fillup is permitted since it will never take the bucket above capacity
   end
 end

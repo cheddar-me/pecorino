@@ -94,6 +94,65 @@ Pecorino::Sqlite = Struct.new(:model_class) do
     [capped_level_after_fillup, one_if_did_overflow == 1]
   end
 
+  def add_tokens_conditionally(key:, capacity:, leak_rate:, n_tokens:)
+    # Take double the time it takes the bucket to empty under normal circumstances
+    # until the bucket may be deleted.
+    may_be_deleted_after_seconds = (capacity.to_f / leak_rate.to_f) * 2.0
+
+    # Create the leaky bucket if it does not exist, and update
+    # to the new level, taking the leak rate into account - if the bucket exists.
+    query_params = {
+      key: key.to_s,
+      capacity: capacity.to_f,
+      delete_after_s: may_be_deleted_after_seconds,
+      leak_rate: leak_rate.to_f,
+      now_s: Time.now.to_f, # See above as to why we are using a time value passed in
+      fillup: n_tokens.to_f,
+      id: SecureRandom.uuid # SQLite3 does not autogenerate UUIDs
+    }
+
+    sql = model_class.sanitize_sql_array([<<~SQL, query_params])
+      -- With SQLite MATERIALIZED has to be used so that level_post is calculated before the UPDATE takes effect
+      WITH pre(level_post_with_uncapped_fillup, level_post) AS MATERIALIZED (
+        SELECT
+          MAX(0.0, level + :fillup - ((:now_s - last_touched_at) * :leak_rate)) AS level_post_with_uncapped_fillup,
+          MAX(0.0, level + 0.0 - ((:now_s - last_touched_at) * :leak_rate)) AS level_post
+        FROM
+          pecorino_leaky_buckets
+        WHERE key = :key
+      )
+      INSERT INTO pecorino_leaky_buckets AS t
+        (id, key, last_touched_at, may_be_deleted_after, level)
+      VALUES
+        (
+          :id,
+          :key,
+          :now_s, -- Precision loss must be avoided here as it is used for calculations
+          DATETIME('now', '+:delete_after_s seconds'), -- Precision loss is acceptable here
+          MAX(0.0,
+            (CASE WHEN :fillup > :capacity THEN 0.0 ELSE :fillup END)
+          )
+        )
+      ON CONFLICT (key) DO UPDATE SET
+        last_touched_at = EXCLUDED.last_touched_at,
+        may_be_deleted_after = EXCLUDED.may_be_deleted_after,
+        level = CASE WHEN (SELECT level_post_with_uncapped_fillup FROM pre) <= :capacity THEN
+          (SELECT level_post_with_uncapped_fillup FROM pre)
+        ELSE
+          (SELECT level_post FROM pre)
+        END
+      RETURNING
+        COALESCE((SELECT level_post FROM pre), 0.0) AS level_before,
+        level AS level_after
+    SQL
+
+    # Re .uncached - https://stackoverflow.com/questions/73184531/why-would-postgres-clock-timestamp-freeze-inside-a-rails-unit-test
+    upserted = model_class.connection.uncached { model_class.connection.select_one(sql) }
+    level_after = upserted.fetch("level_after")
+    level_before = upserted.fetch("level_before")
+    [level_after, level_after >= capacity, level_after != level_before]
+  end
+
   def set_block(key:, block_for:)
     query_params = {id: SecureRandom.uuid, key: key.to_s, block_for: block_for.to_f, now_s: Time.now.to_f}
     block_set_query = model_class.sanitize_sql_array([<<~SQL, query_params])

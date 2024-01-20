@@ -25,7 +25,6 @@
 # The storage use is one DB row per leaky bucket you need to manage (likely - one throttled entity such
 # as a combination of an IP address + the URL you need to procect). The `key` is an arbitrary string you provide.
 class Pecorino::LeakyBucket
-
   # Returned from `.state` and `.fillup`
   class State
     def initialize(level, is_full)
@@ -35,9 +34,7 @@ class Pecorino::LeakyBucket
 
     # Returns the level of the bucket
     # @return [Float]
-    def level
-      @level
-    end
+    attr_reader :level
 
     # Tells whether the bucket was detected to be full when the operation on
     # the LeakyBucket was performed.
@@ -133,7 +130,7 @@ class Pecorino::LeakyBucket
     capped_level_after_fillup, is_full, did_accept = Pecorino.adapter.add_tokens_conditionally(capacity: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
     ConditionalFillupResult.new(capped_level_after_fillup, is_full, did_accept)
   end
-  
+
   # Returns the current state of the bucket, containing the level and whether the bucket is full.
   # Calling this method will not perform any database writes.
   #
