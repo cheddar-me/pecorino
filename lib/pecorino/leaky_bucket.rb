@@ -156,6 +156,6 @@ class Pecorino::LeakyBucket
   # @param n_tokens[Float]
   # @return [boolean]
   def able_to_accept?(n_tokens)
-    (state.level + n_tokens) < @capacity
+    (state.level + n_tokens) <= @capacity
   end
 end

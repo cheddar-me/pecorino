@@ -1,3 +1,4 @@
+- Make sure Bucket#able_to_accept? allows the bucket to be filled to capacity, not only to below capacity
 - Improve YARD documentation
 - Allow "conditional fillup" - only add tokens to the leaky bucket if the bucket has enough space
 - Fix `over_time` leading to incorrect `leak_rate`. The divider/divisor were swapped, leading to the inverse leak rate getting computed.
