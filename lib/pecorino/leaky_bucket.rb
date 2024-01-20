@@ -25,7 +25,7 @@
 # The storage use is one DB row per leaky bucket you need to manage (likely - one throttled entity such
 # as a combination of an IP address + the URL you need to procect). The `key` is an arbitrary string you provide.
 class Pecorino::LeakyBucket
-  State = Struct.new(:level, :full) do
+  State = Struct.new(:level, :full, :did_accept) do
     # Returns the level of the bucket after the operation on the LeakyBucket
     # object has taken place. There is a guarantee that no tokens have leaked
     # from the bucket between the operation and the freezing of the State
@@ -43,6 +43,16 @@ class Pecorino::LeakyBucket
     #   @return [Boolean]
 
     alias_method :full?, :full
+
+    # Tells whether the bucket did accept the fillup, or the fillup has been rejected
+    # because the bucket would overflow. When using the `fillup()` method the bucket always
+    # accepts the fillup, so this attribute will always be `true`. It may be `false` however
+    # if `fillup_if_able` is used.
+    #
+    # @!attribute [r] full
+    #   @return [Boolean]
+
+    alias_method :did_accept?, :did_accept
 
     # Returns the bucket level of the bucket state as a Float
     #
@@ -99,16 +109,26 @@ class Pecorino::LeakyBucket
   # Places `n` tokens in the bucket. Once tokens are placed, the bucket is set to expire
   # within 2 times the time it would take it to leak to 0, regardless of how many tokens
   # get put in - since the amount of tokens put in the bucket will always be capped
-  # to the `capacity:` value you pass to the constructor. Calling `fillup` also deletes
-  # leaky buckets which have expired.
+  # to the `capacity:` value you pass to the constructor.
   #
   # @param n_tokens[Float]
   # @return [State] the state of the bucket after the operation
   def fillup(n_tokens)
     capped_level_after_fillup, did_overflow = Pecorino.adapter.add_tokens(capacity: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
-    State.new(capped_level_after_fillup, did_overflow)
+    State.new(capped_level_after_fillup, did_overflow, _did_accept = true)
   end
 
+  # Places `n` tokens in the bucket, but only if there actually is enough capacity left.
+  # This can be used for "exactly once" semantics - the bucket will only accept the fillup
+  # if there is enough capacity, otherwise the level of the bucket will be left untouched.
+  #
+  # @param n_tokens[Float]
+  # @return [State] the state of the bucket after the operation
+  def fillup_if_able(n_tokens)
+    capped_level_after_fillup, did_overflow, did_accept = Pecorino.adapter.add_tokens_conditionally(capacity: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
+    State.new(capped_level_after_fillup, did_overflow, did_accept)
+  end
+  
   # Returns the current state of the bucket, containing the level and whether the bucket is full.
   # Calling this method will not perform any database writes.
   #

@@ -84,6 +84,11 @@ Pecorino::Postgres = Struct.new(:model_class) do
     [capped_level_after_fillup, did_overflow]
   end
 
+  def add_tokens_conditionally(key:, capacity:, leak_rate:, n_tokens:)
+    capped_level, at_capacity = add_tokens(key:, capacity:, leak_rate:, n_tokens:)
+    [capped_level, at_capacity, _did_accept = true]
+  end
+
   def set_block(key:, block_for:)
     query_params = {key: key.to_s, block_for: block_for.to_f}
     block_set_query = model_class.sanitize_sql_array([<<~SQL, query_params])
