@@ -14,6 +14,10 @@ class Pecorino::Throttle
       blocked_until ? true : false
     end
 
+    # Returns the number of seconds until the block will be lifted, rouded up to the closest
+    # whole second. This value can be used in a "Retry-After" HTTP response header.
+    #
+    # @return [Integer]
     def retry_after
       (blocked_until - Time.now.utc).ceil
     end
@@ -23,11 +27,14 @@ class Pecorino::Throttle
     # Returns the throttle which raised the exception. Can be used to disambiguiate between
     # multiple Throttled exceptions when multiple throttles are applied in a layered fashion:
     #
+    # @example
+    #    begin
     #      ip_addr_throttle.request!
     #      user_email_throttle.request!
     #      db_insert_throttle.request!(n_items_to_insert)
     #    rescue Pecorino::Throttled => e
     #      deliver_notification(user) if e.throttle == user_email_throttle
+    #    end
     #
     # @return [Throttle]
     attr_reader :throttle
@@ -56,7 +63,8 @@ class Pecorino::Throttle
   # Tells whether the throttle will let this number of requests pass without raising
   # a Throttled. Note that this is not race-safe. Another request could overflow the bucket
   # after you call `able_to_accept?` but before you call `throttle!`. So before performing
-  # the action you still need to call `throttle!`
+  # the action you still need to call `throttle!`. You may still use `able_to_accept?` to
+  # provide better UX to your users before they cause an action that would otherwise throttle.
   #
   # @param n_tokens[Float]
   # @return [boolean]
@@ -71,10 +79,13 @@ class Pecorino::Throttle
   # The exception can be rescued later to provide a 429 response. This method is better
   # to use before performing the unit of work that the throttle is guarding:
   #
-  # @example      t.request!
-  #               Note.create!(note_params)
-  #            rescue Pecorino::Throttle::Throttled => e
-  #               [429, {"Retry-After" => e.retry_after.to_s}, []]
+  # @example
+  #   begin
+  #      t.request!
+  #      Note.create!(note_params)
+  #   rescue Pecorino::Throttle::Throttled => e
+  #      [429, {"Retry-After" => e.retry_after.to_s}, []]
+  #   end
   #
   # If the method call succeeds it means that the request is not getting throttled.
   #
@@ -82,19 +93,19 @@ class Pecorino::Throttle
   def request!(n = 1)
     state = request(n)
     raise Throttled.new(self, state) if state.blocked?
+    nil
   end
 
   # Register that a request is being performed. Will not raise any exceptions but return
   # the time at which the block will be lifted if a block resulted from this request or
   # was already in effect. Can be used for registering actions which already took place,
-  # but should result in subsequent actions being blocked in subsequent requests later.
+  # but should result in subsequent actions being blocked.
   #
-  # @example    unless t.able_to_accept?
-  #       Note.create!(note_params)
-  #       t.request
-  #     else
-  #       raise "Throttled or block in effect"
-  #     end
+  # @example
+  #   if t.able_to_accept?
+  #     Entry.create!(entry_params)
+  #     t.request
+  #   end
   #
   # @return [State] the state of the throttle after filling up the leaky bucket / trying to pass the block
   def request(n = 1)
