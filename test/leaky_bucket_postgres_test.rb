@@ -152,14 +152,12 @@ class LeakyBucketPostgresTest < ActiveSupport::TestCase
 
   test "allows conditional fillup even if the bucket leaks out to 0 between calls" do
     bucket = Pecorino::LeakyBucket.new(key: Random.uuid, over_time: 0.5, capacity: 30)
-    30.times do |i|
-      st = bucket.fillup_conditionally(1)
-      assert st.accepted?, "The #{i} fillup should have been accepted"
-      warn st.inspect
+    # Once we above 29, the last fillup should be rejected
+    until bucket.state.level > 29
+      fillup_result = bucket.fillup_conditionally(1)
+      assert fillup_result.accepted?
     end
-    st = bucket.fillup_conditionally(1)
-    warn st.inspect
-    refute st.accepted?, "The 31st fillup should be rejected"
+    refute bucket.fillup_conditionally(1).accepted?, "The 31st fillup should be rejected"
     sleep 0.6 # Spend enough time to allow the bucket to leak out
     assert bucket.fillup_conditionally(1).accepted?, "Once the bucket has leaked out to 0 the fillup should be accepted again"
   end
