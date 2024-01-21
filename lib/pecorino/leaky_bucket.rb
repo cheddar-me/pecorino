@@ -54,10 +54,7 @@ class Pecorino::LeakyBucket
       @accepted = !!accepted
     end
 
-    # Tells whether the bucket accepted the proposed fillup. If the fillup
-    # would fill the bucket to capacity, the bucket should have accepted the
-    # fillup. If the fullup would make the bucket overflow, the fillup gets
-    # rejected and the fillup does not take place.
+    # Tells whether the bucket did accept the requested fillup
     # @return [Boolean]
     def accepted?
       @accepted
