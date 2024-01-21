@@ -100,10 +100,16 @@ Pecorino::Postgres = Struct.new(:model_class) do
     }
 
     sql = model_class.sanitize_sql_array([<<~SQL, query_params])
-      WITH pre AS (
+      WITH pre AS MATERIALIZED (
         SELECT
-          GREATEST(0.0, level - (EXTRACT(EPOCH FROM (clock_timestamp() - last_touched_at)) * :leak_rate)) AS level_post,
-          GREATEST(0.0, level + :fillup - (EXTRACT(EPOCH FROM (clock_timestamp() - last_touched_at)) * :leak_rate)) AS level_post_with_uncapped_fillup
+          -- Note the double clamping here. First we clamp the "current level - leak" to not go below zero,
+          -- then we also clamp the above + fillup to not go below 0
+          GREATEST(0.0, 
+              GREATEST(0.0, level - (EXTRACT(EPOCH FROM (clock_timestamp() - last_touched_at)) * :leak_rate)) + :fillup
+          ) AS level_post_with_uncapped_fillup,
+          GREATEST(0.0,
+              level - (EXTRACT(EPOCH FROM (clock_timestamp() - last_touched_at)) * :leak_rate)
+          ) AS level_post
         FROM pecorino_leaky_buckets
         WHERE key = :key
       )
@@ -131,9 +137,7 @@ Pecorino::Postgres = Struct.new(:model_class) do
         level AS level_after
     SQL
 
-    # Re .uncached - https://stackoverflow.com/questions/73184531/why-would-postgres-clock-timestamp-freeze-inside-a-rails-unit-test
     upserted = model_class.connection.uncached { model_class.connection.select_one(sql) }
-
     level_after = upserted.fetch("level_after")
     level_before = upserted.fetch("level_before")
     [level_after, level_after >= capacity, level_after != level_before]
@@ -145,17 +149,17 @@ Pecorino::Postgres = Struct.new(:model_class) do
       INSERT INTO pecorino_blocks AS t
         (key, blocked_until)
       VALUES
-        (:key, NOW() + ':block_for seconds'::interval)
+        (:key, clock_timestamp() + ':block_for seconds'::interval)
       ON CONFLICT (key) DO UPDATE SET
         blocked_until = GREATEST(EXCLUDED.blocked_until, t.blocked_until)
-      RETURNING blocked_until;
+      RETURNING blocked_until
     SQL
     model_class.connection.uncached { model_class.connection.select_value(block_set_query) }
   end
 
   def blocked_until(key:)
     block_check_query = model_class.sanitize_sql_array([<<~SQL, key])
-      SELECT blocked_until FROM pecorino_blocks WHERE key = ? AND blocked_until >= NOW() LIMIT 1
+      SELECT blocked_until FROM pecorino_blocks WHERE key = ? AND blocked_until >= clock_timestamp() LIMIT 1
     SQL
     model_class.connection.uncached { model_class.connection.select_value(block_check_query) }
   end

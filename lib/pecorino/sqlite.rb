@@ -111,16 +111,10 @@ Pecorino::Sqlite = Struct.new(:model_class) do
       id: SecureRandom.uuid # SQLite3 does not autogenerate UUIDs
     }
 
-    sql = model_class.sanitize_sql_array([<<~SQL, query_params])
-      -- With SQLite MATERIALIZED has to be used so that level_post is calculated before the UPDATE takes effect
-      WITH pre(level_post_with_uncapped_fillup, level_post) AS MATERIALIZED (
-        SELECT
-          MAX(0.0, level + :fillup - ((:now_s - last_touched_at) * :leak_rate)) AS level_post_with_uncapped_fillup,
-          MAX(0.0, level + 0.0 - ((:now_s - last_touched_at) * :leak_rate)) AS level_post
-        FROM
-          pecorino_leaky_buckets
-        WHERE key = :key
-      )
+    # Sadly with SQLite we need to do an INSERT first, because otherwise the inserted row is visible
+    # to the WITH clause, so we cannot combine the initial fillup and the update into one statement.
+    # This shuld be fine however since we will suppress the INSERT on a key conflict
+    insert_sql = model_class.sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_leaky_buckets AS t
         (id, key, last_touched_at, may_be_deleted_after, level)
       VALUES
@@ -129,24 +123,36 @@ Pecorino::Sqlite = Struct.new(:model_class) do
           :key,
           :now_s, -- Precision loss must be avoided here as it is used for calculations
           DATETIME('now', '+:delete_after_s seconds'), -- Precision loss is acceptable here
-          MAX(0.0,
-            (CASE WHEN :fillup > :capacity THEN 0.0 ELSE :fillup END)
-          )
+          0.0
         )
-      ON CONFLICT (key) DO UPDATE SET
-        last_touched_at = EXCLUDED.last_touched_at,
-        may_be_deleted_after = EXCLUDED.may_be_deleted_after,
+      ON CONFLICT (key) DO NOTHING
+    SQL
+    model_class.connection.execute(insert_sql)
+
+    sql = model_class.sanitize_sql_array([<<~SQL, query_params])
+      -- With SQLite MATERIALIZED has to be used so that level_post is calculated before the UPDATE takes effect
+      WITH pre(level_post_with_uncapped_fillup, level_post) AS MATERIALIZED (
+        SELECT
+          -- Note the double clamping here. First we clamp the "current level - leak" to not go below zero,
+          -- then we also clamp the above + fillup to not go below 0
+          MAX(0.0, MAX(0.0, level - ((:now_s - last_touched_at) * :leak_rate)) + :fillup) AS level_post_with_uncapped_fillup,
+          MAX(0.0, level - ((:now_s - last_touched_at) * :leak_rate)) AS level_post
+        FROM
+          pecorino_leaky_buckets
+        WHERE key = :key
+      ) UPDATE pecorino_leaky_buckets SET
+        last_touched_at = :now_s,
+        may_be_deleted_after = DATETIME('now', '+:delete_after_s seconds'),
         level = CASE WHEN (SELECT level_post_with_uncapped_fillup FROM pre) <= :capacity THEN
           (SELECT level_post_with_uncapped_fillup FROM pre)
         ELSE
           (SELECT level_post FROM pre)
         END
       RETURNING
-        COALESCE((SELECT level_post FROM pre), 0.0) AS level_before,
+        (SELECT level_post FROM pre) AS level_before,
         level AS level_after
     SQL
 
-    # Re .uncached - https://stackoverflow.com/questions/73184531/why-would-postgres-clock-timestamp-freeze-inside-a-rails-unit-test
     upserted = model_class.connection.uncached { model_class.connection.select_one(sql) }
     level_after = upserted.fetch("level_after")
     level_before = upserted.fetch("level_before")

@@ -101,6 +101,31 @@ class LeakyBucketPostgresTest < ActiveSupport::TestCase
     assert_in_delta bucket.state.level, 0, 0.1
   end
 
+  test "with conditional fillup, allows a freshly created bucket to be filled to capacity with one call" do
+    bucket = Pecorino::LeakyBucket.new(key: Random.uuid, over_time: 1.0, capacity: 1.0)
+    assert bucket.fillup_conditionally(1.0).accepted?
+  end
+
+  test "with conditional fillup, allows an existing bucket to be filled to capacity on the second call (INSERT vs. UPDATE)" do
+    bucket = Pecorino::LeakyBucket.new(key: Random.uuid, over_time: 1.0, capacity: 1.0)
+    bucket.fillup(0.0) # Ensure the bucket row gets created
+    assert bucket.fillup_conditionally(1.0).accepted?
+  end
+
+  test "with conditional fillup, allows an existing bucket to be filled to capacity in a sequence of calls" do
+    bucket = Pecorino::LeakyBucket.new(key: Random.uuid, over_time: 1.0, capacity: 1.0)
+    assert bucket.fillup_conditionally(0.5).accepted?
+    assert bucket.fillup_conditionally(0.5).accepted?
+    refute bucket.fillup_conditionally(0.1).accepted?
+  end
+
+  test "with conditional fillup, allows an existing bucket to be filled close to capacity in a sequence of calls" do
+    bucket = Pecorino::LeakyBucket.new(key: Random.uuid, over_time: 1.0, capacity: 1.0)
+    assert bucket.fillup_conditionally(0.5).accepted?
+    assert bucket.fillup_conditionally(0.4).accepted?
+    refute bucket.fillup_conditionally(0.2).accepted?
+  end
+
   test "allows conditional fillup" do
     bucket = Pecorino::LeakyBucket.new(key: Random.uuid, over_time: 1.0, capacity: 1.0)
 
@@ -123,5 +148,15 @@ class LeakyBucketPostgresTest < ActiveSupport::TestCase
     try_fillup.call(0.3, 1.0, true)
     try_fillup.call(-2, 0.0, true) # A negative fillup is permitted since it will never take the bucket above capacity
     try_fillup.call(1.0, 1.0, true) # Filling up in one step should be permitted
+  end
+
+  test "allows conditional fillup even if the bucket leaks out to 0 between calls" do
+    bucket = Pecorino::LeakyBucket.new(key: Random.uuid, over_time: 0.5, capacity: 30)
+    30.times do
+      assert bucket.fillup_conditionally(1).accepted?
+    end
+    refute bucket.fillup_conditionally(1).accepted?, "The 31st fillup should be rejected"
+    sleep 0.6 # Spend enough time to allow the bucket to leak out
+    assert bucket.fillup_conditionally(1).accepted?, "Once the bucket has leaked out to 0 the fillup should be accepted again"
   end
 end
