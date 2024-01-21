@@ -155,7 +155,9 @@ class LeakyBucketPostgresTest < ActiveSupport::TestCase
     30.times do
       assert bucket.fillup_conditionally(1).accepted?
     end
-    refute bucket.fillup_conditionally(1).accepted?, "The 31st fillup should be rejected"
+    st = bucket.fillup_conditionally(1)
+    warn st.inspect
+    refute st.accepted?, "The 31st fillup should be rejected"
     sleep 0.6 # Spend enough time to allow the bucket to leak out
     assert bucket.fillup_conditionally(1).accepted?, "Once the bucket has leaked out to 0 the fillup should be accepted again"
   end
