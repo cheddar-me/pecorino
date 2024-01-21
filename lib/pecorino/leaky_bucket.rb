@@ -102,7 +102,8 @@ class Pecorino::LeakyBucket
   end
 
   # Places `n` tokens in the bucket. If the bucket has less capacity than `n` tokens, the bucket will be filled to capacity.
-  # If the bucket has less capacity than `n` tokens, it will be filled to capacity.
+  # If the bucket has less capacity than `n` tokens, it will be filled to capacity. If the bucket is already full
+  # when the fillup is requested, the bucket stays at capacity.
   #
   # Once tokens are placed, the bucket is set to expire within 2 times the time it would take it to leak to 0,
   # regardless of how many tokens get put in - since the amount of tokens put in the bucket will always be capped
@@ -115,10 +116,9 @@ class Pecorino::LeakyBucket
     State.new(capped_level_after_fillup, is_full)
   end
 
-  # Places `n` tokens in the bucket, but only if there actually is enough capacity left.
-
   # Places `n` tokens in the bucket. If the bucket has less capacity than `n` tokens, the fillup will be rejected.
-  # This can be used for "exactly once" semantics or just more precise rate limiting.
+  # This can be used for "exactly once" semantics or just more precise rate limiting. Note that if the bucket has
+  # _exactly_ `n` tokens of capacity the fillup will be accepted.
   #
   # Once tokens are placed, the bucket is set to expire within 2 times the time it would take it to leak to 0,
   # regardless of how many tokens get put in - since the amount of tokens put in the bucket will always be capped

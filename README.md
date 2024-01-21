@@ -67,6 +67,8 @@ throttle.request!(20) # Attempt to withdraw 20 dollars more
 throttle.request!(2) # Attempt to withdraw 2 dollars more, will raise `Throttled` and block withdrawals for 3 hours
 ```
 
+## Using just the leaky bucket
+
 Sometimes you don't want to use a throttle, but you want to track the amount added to the leaky bucket over time. A lower-level abstraction is available for that purpose in the form of the `LeakyBucket` class. It will not raise any exceptions and will not install blocks, but will permit you to track a bucket's state over time:
 
 
@@ -77,7 +79,8 @@ sleep 0.2
 b.state #=> Pecorino::LeakyBucket::State(full?: false, level: 1.8)
 ```
 
-Check out the inline YARD documentation for more options.
+Check out the inline YARD documentation for more options. Do take note of the differences between `fillup()` and `fillup_conditionally` as you
+might want to pick one or the other depending on your use case.
 
 ## Cleaning out stale locks from the database
 
