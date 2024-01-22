@@ -1,3 +1,5 @@
+## [0.4.0] - 2024-01-22
+
 - Use Bucket#connditional_fillup inside Throttle and throttle only when the capacity _would_ be exceeded, as opposed
   to throttling when capacity has already been exceeded. This allows for finer-grained throttles such as
   "at most once in", where filling "exactly to capacity" is a requirement. It also provides for more accurate
