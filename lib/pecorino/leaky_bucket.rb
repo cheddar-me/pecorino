@@ -25,37 +25,39 @@
 # The storage use is one DB row per leaky bucket you need to manage (likely - one throttled entity such
 # as a combination of an IP address + the URL you need to procect). The `key` is an arbitrary string you provide.
 class Pecorino::LeakyBucket
-  State = Struct.new(:level, :full) do
-    # Returns the level of the bucket after the operation on the LeakyBucket
-    # object has taken place. There is a guarantee that no tokens have leaked
-    # from the bucket between the operation and the freezing of the State
-    # struct.
-    #
-    # @!attribute [r] level
-    #   @return [Float]
-
-    # Tells whether the bucket was detected to be full when the operation on
-    # the LeakyBucket was performed. There is a guarantee that no tokens have leaked
-    # from the bucket between the operation and the freezing of the State
-    # struct.
-    #
-    # @!attribute [r] full
-    #   @return [Boolean]
-
-    alias_method :full?, :full
-
-    # Returns the bucket level of the bucket state as a Float
-    #
-    # @return [Float]
-    def to_f
-      level.to_f
+  # Returned from `.state` and `.fillup`
+  class State
+    def initialize(level, is_full)
+      @level = level.to_f
+      @full = !!is_full
     end
 
-    # Returns the bucket level of the bucket state rounded to an Integer
-    #
-    # @return [Integer]
-    def to_i
-      level.to_i
+    # Returns the level of the bucket
+    # @return [Float]
+    attr_reader :level
+
+    # Tells whether the bucket was detected to be full when the operation on
+    # the LeakyBucket was performed.
+    # @return [Boolean]
+    def full?
+      @full
+    end
+
+    alias_method :full, :full?
+  end
+
+  # Same as `State` but also communicates whether the write has been permitted or not. A conditional fillup
+  # may refuse a write if it would make the bucket overflow
+  class ConditionalFillupResult < State
+    def initialize(level, is_full, accepted)
+      super(level, is_full)
+      @accepted = !!accepted
+    end
+
+    # Tells whether the bucket did accept the requested fillup
+    # @return [Boolean]
+    def accepted?
+      @accepted
     end
   end
 
@@ -91,22 +93,46 @@ class Pecorino::LeakyBucket
   def initialize(key:, capacity:, leak_rate: nil, over_time: nil)
     raise ArgumentError, "Either leak_rate: or over_time: must be specified" if leak_rate.nil? && over_time.nil?
     raise ArgumentError, "Either leak_rate: or over_time: may be specified, but not both" if leak_rate && over_time
-    @leak_rate = leak_rate || (over_time.to_f / capacity)
+    @leak_rate = leak_rate || (capacity / over_time.to_f)
     @key = key
     @capacity = capacity.to_f
   end
 
-  # Places `n` tokens in the bucket. Once tokens are placed, the bucket is set to expire
-  # within 2 times the time it would take it to leak to 0, regardless of how many tokens
-  # get put in - since the amount of tokens put in the bucket will always be capped
-  # to the `capacity:` value you pass to the constructor. Calling `fillup` also deletes
-  # leaky buckets which have expired.
+  # Places `n` tokens in the bucket. If the bucket has less capacity than `n` tokens, the bucket will be filled to capacity.
+  # If the bucket has less capacity than `n` tokens, it will be filled to capacity. If the bucket is already full
+  # when the fillup is requested, the bucket stays at capacity.
   #
-  # @param n_tokens[Float]
+  # Once tokens are placed, the bucket is set to expire within 2 times the time it would take it to leak to 0,
+  # regardless of how many tokens get put in - since the amount of tokens put in the bucket will always be capped
+  # to the `capacity:` value you pass to the constructor.
+  #
+  # @param n_tokens[Float] How many tokens to fillup by
   # @return [State] the state of the bucket after the operation
   def fillup(n_tokens)
-    capped_level_after_fillup, did_overflow = Pecorino.adapter.add_tokens(capacity: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
-    State.new(capped_level_after_fillup, did_overflow)
+    capped_level_after_fillup, is_full = Pecorino.adapter.add_tokens(capacity: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
+    State.new(capped_level_after_fillup, is_full)
+  end
+
+  # Places `n` tokens in the bucket. If the bucket has less capacity than `n` tokens, the fillup will be rejected.
+  # This can be used for "exactly once" semantics or just more precise rate limiting. Note that if the bucket has
+  # _exactly_ `n` tokens of capacity the fillup will be accepted.
+  #
+  # Once tokens are placed, the bucket is set to expire within 2 times the time it would take it to leak to 0,
+  # regardless of how many tokens get put in - since the amount of tokens put in the bucket will always be capped
+  # to the `capacity:` value you pass to the constructor.
+  #
+  # @example
+  #    withdrawals = LeakyBuket.new(key: "wallet-#{user.id}", capacity: 200, over_time: 1.day)
+  #    if withdrawals.fillup_conditionally(amount_to_withdraw).accepted?
+  #      user.wallet.withdraw(amount_to_withdraw)
+  #    else
+  #      raise "You need to wait a bit before withdrawing more"
+  #    end
+  # @param n_tokens[Float] How many tokens to fillup by
+  # @return [ConditionalFillupResult] the state of the bucket after the operation and whether the operation succeeded
+  def fillup_conditionally(n_tokens)
+    capped_level_after_fillup, is_full, did_accept = Pecorino.adapter.add_tokens_conditionally(capacity: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
+    ConditionalFillupResult.new(capped_level_after_fillup, is_full, did_accept)
   end
 
   # Returns the current state of the bucket, containing the level and whether the bucket is full.
@@ -127,6 +153,6 @@ class Pecorino::LeakyBucket
   # @param n_tokens[Float]
   # @return [boolean]
   def able_to_accept?(n_tokens)
-    (state.level + n_tokens) < @capacity
+    (state.level + n_tokens) <= @capacity
   end
 end

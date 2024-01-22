@@ -3,13 +3,6 @@
 require "test_helper"
 
 class ThrottlePostgresTest < ActiveSupport::TestCase
-  def random_leaky_bucket_name(random: Random.new)
-    (1..32).map do
-      # bytes 97 to 122 are printable lowercase a-z
-      random.rand(97..122)
-    end.pack("C*")
-  end
-
   def setup
     create_postgres_database
   end
@@ -18,29 +11,26 @@ class ThrottlePostgresTest < ActiveSupport::TestCase
     drop_postgres_database
   end
 
-  test "throttles using request!() and blocks" do
-    throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
+  test "request! installs a block and then removes it and communicates the block using exceptions" do
+    throttle = Pecorino::Throttle.new(key: Random.uuid, over_time: 1.0, capacity: 30)
 
-    29.times do
+    # It must be possible to make exactly 30 requests without getting throttled, even if the
+    # bucket does not leak out at all between the calls
+    30.times do
       throttle.request!
     end
 
-    # Depending on timing either the 31st or the 30th request may start to throttle
-    err = assert_raises Pecorino::Throttle::Throttled do
-      loop { throttle.request! }
-    end
-
-    assert_in_delta err.retry_after, 3, 0.5
-    sleep 0.5
-
-    # Ensure we are still throttled
+    # The 31st request must always fail, as it won't fit into the bucket anymore (even if some
+    # tokens have leaked out by this point)
     err = assert_raises Pecorino::Throttle::Throttled do
       throttle.request!
     end
     assert_equal throttle, err.throttle
-    assert_in_delta err.retry_after, 2.5, 0.5
+    assert_in_delta err.retry_after, 1, 0.1
 
-    sleep(3.05)
+    # Sleep until the block gets released - the block gets for block_for, which is the time it takes the bucket
+    # to leak out to 0
+    sleep 1.1
     assert_nothing_raised do
       throttle.request!
     end
@@ -48,12 +38,12 @@ class ThrottlePostgresTest < ActiveSupport::TestCase
 
   test "allows the block_for parameter to be omitted" do
     assert_nothing_raised do
-      Pecorino::Throttle.new(key: random_leaky_bucket_name, over_time: 1, capacity: 30)
+      Pecorino::Throttle.new(key: Random.uuid, over_time: 1, capacity: 30)
     end
   end
 
   test "still throttles using request() without raising exceptions" do
-    throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
+    throttle = Pecorino::Throttle.new(key: Random.uuid, leak_rate: 30, capacity: 30, block_for: 3)
 
     20.times do
       state = throttle.request
@@ -82,7 +72,7 @@ class ThrottlePostgresTest < ActiveSupport::TestCase
   end
 
   test "able_to_accept? returns the prediction whether the throttle will accept" do
-    throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 2)
+    throttle = Pecorino::Throttle.new(key: Random.uuid, leak_rate: 30, capacity: 30, block_for: 2)
 
     assert throttle.able_to_accept?
     assert throttle.able_to_accept?(29)
@@ -99,7 +89,7 @@ class ThrottlePostgresTest < ActiveSupport::TestCase
   end
 
   test "starts to throttle sooner with a higher fillup rate" do
-    throttle = Pecorino::Throttle.new(key: random_leaky_bucket_name, leak_rate: 30, capacity: 30, block_for: 3)
+    throttle = Pecorino::Throttle.new(key: Random.uuid, leak_rate: 30, capacity: 30, block_for: 3)
 
     15.times do
       throttle.request!(2)

@@ -1,3 +1,12 @@
+- Use Bucket#connditional_fillup inside Throttle and throttle only when the capacity _would_ be exceeded, as opposed
+  to throttling when capacity has already been exceeded. This allows for finer-grained throttles such as
+  "at most once in", where filling "exactly to capacity" is a requirement. It also provides for more accurate
+  and easier to understand throttling in general.
+- Make sure Bucket#able_to_accept? allows the bucket to be filled to capacity, not only to below capacity
+- Improve YARD documentation
+- Allow "conditional fillup" - only add tokens to the leaky bucket if the bucket has enough space.
+- Fix `over_time` leading to incorrect `leak_rate`. The divider/divisor were swapped, leading to the inverse leak rate getting computed.
+
 ## [0.3.0] - 2024-01-18
 
 - Allow `over_time` in addition to `leak_rate`, which is a more intuitive parameter to tweak

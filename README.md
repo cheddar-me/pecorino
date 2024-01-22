@@ -22,7 +22,7 @@ And then execute:
 
 ## Usage
 
-Once the installation is done you can use Pecorino to start defining your throttles. Imagine you have a resource called `vault` and you want to limit the number of updates to it to 5 per second. To achieve that, instantiate a new `Throttle` in your controller or job code, and then trigger it using `Throttle#request!`. A call to `request!` registers 1 token getting added to the bucket. If the bucket is full, or the throttle is currently in "block" mode (has recently been triggered), a `Pecorino::Throttle::Throttled` exception will be raised.
+Once the installation is done you can use Pecorino to start defining your throttles. Imagine you have a resource called `vault` and you want to limit the number of updates to it to 5 per second. To achieve that, instantiate a new `Throttle` in your controller or job code, and then trigger it using `Throttle#request!`. A call to `request!` registers 1 token getting added to the bucket. If the bucket would overspill (your request would make it overflow), or the throttle is currently in "block" mode (has recently been triggered), a `Pecorino::Throttle::Throttled` exception will be raised.
 
 ```ruby
 throttle = Pecorino::Throttle.new(key: "vault", over_time: 1.second, capacity: 5)
@@ -58,7 +58,7 @@ return render :capacity_exceeded unless throttle.able_to_accept?
 If you are dealing with a metered resource (like throughput, money, amount of storage...) you can supply the number of tokens to either `request!` or `able_to_accept?` to indicate the desired top-up of the leaky bucket. For example, if you are maintaining user wallets and want to ensure no more than 100 dollars may be taken from the wallet within a certain amount of time, you can do it like so:
 
 ```ruby
-throttle = Pecorino::Throttle.new(key: "wallet_t_#{current_user.id}", over_time_: 1.hour, capacity: 100, block_for: 60*60*3)
+throttle = Pecorino::Throttle.new(key: "wallet_t_#{current_user.id}", over_time_: 1.hour, capacity: 100, block_for: 3.hours)
 throttle.request!(20) # Attempt to withdraw 20 dollars
 throttle.request!(20) # Attempt to withdraw 20 dollars more
 throttle.request!(20) # Attempt to withdraw 20 dollars more
@@ -66,6 +66,8 @@ throttle.request!(20) # Attempt to withdraw 20 dollars more
 throttle.request!(20) # Attempt to withdraw 20 dollars more
 throttle.request!(2) # Attempt to withdraw 2 dollars more, will raise `Throttled` and block withdrawals for 3 hours
 ```
+
+## Using just the leaky bucket
 
 Sometimes you don't want to use a throttle, but you want to track the amount added to the leaky bucket over time. A lower-level abstraction is available for that purpose in the form of the `LeakyBucket` class. It will not raise any exceptions and will not install blocks, but will permit you to track a bucket's state over time:
 
@@ -77,9 +79,10 @@ sleep 0.2
 b.state #=> Pecorino::LeakyBucket::State(full?: false, level: 1.8)
 ```
 
-Check out the inline YARD documentation for more options.
+Check out the inline YARD documentation for more options. Do take note of the differences between `fillup()` and `fillup_conditionally` as you
+might want to pick one or the other depending on your use case.
 
-## Cleaning out stale locks from the database
+## Cleaning out stale buckets and blocks from the database
 
 We recommend running the following bit of code every couple of hours (via cron or similar) to delete the stale blocks and leaky buckets from the system:
 

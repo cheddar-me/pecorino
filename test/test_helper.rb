@@ -21,6 +21,8 @@ class ActiveSupport::TestCase
   def drop_sqlite_db
     ActiveRecord::Base.connection.close
     FileUtils.rm_rf(test_db_filename)
+    FileUtils.rm_rf(test_db_filename + "-wal")
+    FileUtils.rm_rf(test_db_filename + "-shm")
   end
 
   def test_db_filename
