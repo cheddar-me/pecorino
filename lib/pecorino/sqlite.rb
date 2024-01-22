@@ -125,7 +125,10 @@ Pecorino::Sqlite = Struct.new(:model_class) do
           DATETIME('now', '+:delete_after_s seconds'), -- Precision loss is acceptable here
           0.0
         )
-      ON CONFLICT (key) DO NOTHING
+      ON CONFLICT (key) DO UPDATE SET
+      -- Make sure we extend the lifetime of the row
+      -- so that it can't be deleted between our INSERT and our UPDATE
+        may_be_deleted_after = EXCLUDED.may_be_deleted_after
     SQL
     model_class.connection.execute(insert_sql)
 
