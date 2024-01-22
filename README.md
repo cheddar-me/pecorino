@@ -22,7 +22,7 @@ And then execute:
 
 ## Usage
 
-Once the installation is done you can use Pecorino to start defining your throttles. Imagine you have a resource called `vault` and you want to limit the number of updates to it to 5 per second. To achieve that, instantiate a new `Throttle` in your controller or job code, and then trigger it using `Throttle#request!`. A call to `request!` registers 1 token getting added to the bucket. If the bucket is full, or the throttle is currently in "block" mode (has recently been triggered), a `Pecorino::Throttle::Throttled` exception will be raised.
+Once the installation is done you can use Pecorino to start defining your throttles. Imagine you have a resource called `vault` and you want to limit the number of updates to it to 5 per second. To achieve that, instantiate a new `Throttle` in your controller or job code, and then trigger it using `Throttle#request!`. A call to `request!` registers 1 token getting added to the bucket. If the bucket would overspill (your request would make it overflow), or the throttle is currently in "block" mode (has recently been triggered), a `Pecorino::Throttle::Throttled` exception will be raised.
 
 ```ruby
 throttle = Pecorino::Throttle.new(key: "vault", over_time: 1.second, capacity: 5)
