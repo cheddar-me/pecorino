@@ -1,3 +1,7 @@
+- Use Bucket#connditional_fillup inside Throttle and throttle only when the capacity _would_ be exceeded, as opposed
+  to throttling when capacity has already been exceeded. This allows for finer-grained throttles such as
+  "at most once in", where filling "exactly to capacity" is a requirement. It also provides for more accurate
+  and easier to understand throttling in general.
 - Make sure Bucket#able_to_accept? allows the bucket to be filled to capacity, not only to below capacity
 - Improve YARD documentation
 - Allow "conditional fillup" - only add tokens to the leaky bucket if the bucket has enough space.
