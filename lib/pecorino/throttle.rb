@@ -54,8 +54,8 @@ class Pecorino::Throttle
   #   the bucket to leak out to the level of 0
   # @param leaky_bucket_options Options for `Pecorino::LeakyBucket.new`
   # @see PecorinoLeakyBucket.new
-  def initialize(key:, block_for: nil, **)
-    @bucket = Pecorino::LeakyBucket.new(key:, **)
+  def initialize(key:, block_for: nil, **leaky_bucket_options)
+    @bucket = Pecorino::LeakyBucket.new(key:, **leaky_bucket_options)
     @key = key.to_s
     @block_for = block_for ? block_for.to_f : (@bucket.capacity / @bucket.leak_rate)
   end
