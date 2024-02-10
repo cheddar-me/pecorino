@@ -1,3 +1,5 @@
+- Make sure Pecorino works on Ruby 2.7 as well by removing 3.x-exclusive syntax
+
 ## [0.4.0] - 2024-01-22
 
 - Use Bucket#connditional_fillup inside Throttle and throttle only when the capacity _would_ be exceeded, as opposed
