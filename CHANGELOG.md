@@ -1,3 +1,5 @@
+## [0.4.1] - 2024-02-11
+
 - Make sure Pecorino works on Ruby 2.7 as well by removing 3.x-exclusive syntax
 
 ## [0.4.0] - 2024-01-22
