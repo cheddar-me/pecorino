@@ -24,6 +24,8 @@ And then execute:
 
 Once the installation is done you can use Pecorino to start defining your throttles. Imagine you have a resource called `vault` and you want to limit the number of updates to it to 5 per second. To achieve that, instantiate a new `Throttle` in your controller or job code, and then trigger it using `Throttle#request!`. A call to `request!` registers 1 token getting added to the bucket. If the bucket would overspill (your request would make it overflow), or the throttle is currently in "block" mode (has recently been triggered), a `Pecorino::Throttle::Throttled` exception will be raised.
 
+We call this pattern **prefix usage** - apply throttle before allowing the action to proceed. This is more secure than registering an action after it has taken place.
+
 ```ruby
 throttle = Pecorino::Throttle.new(key: "vault", over_time: 1.second, capacity: 5)
 throttle.request!
@@ -66,6 +68,27 @@ throttle.request!(20) # Attempt to withdraw 20 dollars more
 throttle.request!(20) # Attempt to withdraw 20 dollars more
 throttle.request!(2) # Attempt to withdraw 2 dollars more, will raise `Throttled` and block withdrawals for 3 hours
 ```
+
+## Postfix topup of the throttle
+
+In addition to use case where you would want to trigger the throttle before performing an action, there are legitimate use cases where you actually want to use the throttle as a _meter_ instead, measuring the effect of an action which has already been permitted – and then only make it trigger on a subsequent action. This **postfix usage** is less secure, but it allows for a different sequencing of calls. Imagine you want to implement the popular [circuit breaker pattern](https://dzone.com/articles/introduction-to-the-circuit-breaker-pattern) where all your nodes are able to share the error rate information between them. Pecorino gives you all the tools to implement a binary state circuit breaker (open or closed) based on an error rate. Imagine you want to stop sending requests if the service you are calling raises `Timeout::Error` frequently. Then your call to the service could look like this:
+
+```ruby
+begin
+  error_rate_throttle = Pecorino::Throttle.new("some-fancy-ai-api-errors", capacity: 10, over_time: 30.seconds, block_for: 120.seconds)
+
+  if error_rate_throttle.able_to_accept? # See whether adding 1 request will overflow the error rate
+    fancy_ai_api.post_chat_message("Imagine I am a rocket scientist on a moonbase. Invent me...")
+  else
+    raise "The error rate for fancy_ai_api has been exceeded"
+  end
+rescue Timeout::Error
+  error_rate_throttle.request(1) # use bang-less method since we do not need the Throttled exception
+  raise
+end
+```
+
+This way, every time there is an error on the "fancy AI service" the throttle will be triggered, and if it overflows - a subsequent request will be blocked.
 
 ## Using just the leaky bucket
 
