@@ -162,4 +162,18 @@ class Pecorino::Throttle
       State.new(fresh_blocked_until.utc)
     end
   end
+
+  # Fillup the throttle with 1 request and then perform the passed block. This is useful to perform actions which should
+  # be rate-limited - alerts, calls to external services and the like. If the call is allowed to proceed,
+  # the passed block will be executed. If the throttle is in the blocked state or if the call puts the throttle in
+  # the blocked state the block will not be executed
+  #
+  # @example
+  #   t.throttled { Slack.alert("Things are going wrong") }
+  #
+  # @return [Object] the return value of the block if the block gets executed, or `nil` if the call got throttled
+  def throttled(&blk)
+    return if request(1).blocked?
+    yield
+  end
 end

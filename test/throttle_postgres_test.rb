@@ -106,4 +106,18 @@ class ThrottlePostgresTest < ActiveSupport::TestCase
 
     assert_in_delta err.retry_after, 3, 0.5
   end
+
+  test "throttled() calls the block just once" do
+    throttle = Pecorino::Throttle.new(key: Random.uuid, over_time: 1.minute, capacity: 1)
+
+    counter = 0
+
+    10.times do
+      throttle.throttled do
+        counter += 1
+      end
+    end
+
+    assert_equal 1, counter
+  end
 end

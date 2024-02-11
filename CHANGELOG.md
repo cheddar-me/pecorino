@@ -1,3 +1,4 @@
+- Add `Throttle#throttled` for silencing alerts
 - **BREAKING CHANGE** Remove `Throttle::State#retry_after`, because there is no reasonable value for that member if the throttle is not in the "blocked" state
 - Allow accessing `Throttle::State` from the `Throttled` exception so that the blocked throttle state can be cached downstream (in Rails cache, for example)
 - Make `Throttle#request!` return the new state if there was no exception raised

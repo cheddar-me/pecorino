@@ -27,7 +27,7 @@ Once the installation is done you can use Pecorino to start defining your thrott
 We call this pattern **prefix usage** - apply throttle before allowing the action to proceed. This is more secure than registering an action after it has taken place.
 
 ```ruby
-throttle = Pecorino::Throttle.new(key: "vault", over_time: 1.second, capacity: 5)
+throttle = Pecorino::Throttle.new(key: "password-attempts-#{request.ip}", over_time: 1.minute, capacity: 5, block_for: 30.minutes)
 throttle.request!
 ```
 In a Rails controller you can then rescue from this exception to render the appropriate response:
@@ -68,6 +68,19 @@ throttle.request!(20) # Attempt to withdraw 20 dollars more
 throttle.request!(20) # Attempt to withdraw 20 dollars more
 throttle.request!(2) # Attempt to withdraw 2 dollars more, will raise `Throttled` and block withdrawals for 3 hours
 ```
+
+## Performing a block only if it would be allowed by the throttle
+
+You can use Pecorino to avoid nuisance alerting - use it to limit the alert rate:
+
+```ruby
+alert_nuisance_t = Pecorino::Throttle.new(key: "disk-full-alert", over_time_: 2.hours, capacity: 1, block_for: 2.hours)
+alert_nuisance_t.throttled do
+  Slack.alerts.deliver("Disk is full again! please investigate!")
+end
+```
+
+This will not raise any exceptions. The `throttled` method performs **prefix throttling** to prevent multiple callers hitting the throttle at the same time, so it is guaranteed to be atomic.
 
 ## Postfix topup of the throttle
 
