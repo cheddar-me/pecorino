@@ -1,3 +1,5 @@
+## [0.5.0] - 2024-02-11
+
 - Add `CachedThrottle` for caching the throttle blocks. This allows protection to the database when the throttle is in a blocked state.
 - Add `Throttle#throttled` for silencing alerts
 - **BREAKING CHANGE** Remove `Throttle::State#retry_after`, because there is no reasonable value for that member if the throttle is not in the "blocked" state
