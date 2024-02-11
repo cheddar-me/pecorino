@@ -7,6 +7,7 @@ require_relative "pecorino/version"
 require_relative "pecorino/leaky_bucket"
 require_relative "pecorino/throttle"
 require_relative "pecorino/railtie" if defined?(Rails::Railtie)
+require_relative "pecorino/cached_throttle"
 
 module Pecorino
   autoload :Postgres, "pecorino/postgres"

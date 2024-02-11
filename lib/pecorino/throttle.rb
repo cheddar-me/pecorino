@@ -89,6 +89,13 @@ class Pecorino::Throttle
     end
   end
 
+  # The key for that throttle. Each key defines a unique throttle based on either a given name or
+  # discriminators. If there is a component you want to key your throttle by, include it in the
+  # `key` keyword argument to the constructor, like `"t-ip-#{request.ip}"`
+  #
+  # @return [String]
+  attr_reader :key
+
   # @param key[String] the key for both the block record and the leaky bucket
   # @param block_for[Numeric] the number of seconds to block any further requests for. Defaults to time it takes
   #   the bucket to leak out to the level of 0
