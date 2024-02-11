@@ -48,6 +48,7 @@ class Pecorino::CachedThrottle
   def able_to_accept?(n = 1)
     blocked_state = cached_blocked_state
     return false if blocked_state&.blocked?
+
     @throttle.able_to_accept?(n)
   end
 
@@ -60,13 +61,32 @@ class Pecorino::CachedThrottle
     yield
   end
 
+  # Returns the key of the throttle
+  #
+  # @see Pecorino::Throttle#key
+  def key
+    @throttle.key
+  end
+
+  # Returns `false` if there is a currently active block for that throttle in the cache. Otherwise forwards to underlying throttle.
+  #
+  # @see Pecorino::Throttle#able_to_accept?
+  def state
+    blocked_state = cached_blocked_state
+    return blocked_state if blocked_state&.blocked?
+
+    @throttle.state.tap do |state|
+      cache_blocked_state(state) if state.blocked?
+    end
+  end
+
   private
 
   def cache_blocked_state(state)
-    @cache_store.write("pcrn-cached-throttle-#{@throttle.key}", state, expires_after: state.blocked_until)
+    @cache_store.write("pecorino-cached-throttle-state-#{@throttle.key}", state, expires_after: state.blocked_until)
   end
 
   def cached_blocked_state
-    @cache_store.read("pcrn-cached-throttle-#{@throttle.key}")
+    @cache_store.read("pecorino-cached-throttle-state-#{@throttle.key}")
   end
 end

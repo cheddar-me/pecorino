@@ -94,4 +94,28 @@ class CachedThrottleTest < ActiveSupport::TestCase
 
     assert_nil cached_throttle.throttled { 345 }
   end
+
+  test "caches results of state() and correctly returns cached state until the block is lifted" do
+    store = ActiveSupport::Cache::MemoryStore.new
+    throttle = Pecorino::Throttle.new(key: Random.uuid, capacity: 2, over_time: 1.second, block_for: 2.seconds)
+    cached_throttle = Pecorino::CachedThrottle.new(store, throttle)
+
+    cached_throttle.request(2)
+    blocked_state = cached_throttle.request(1)
+    blocked_state_from_cache = cached_throttle.state
+
+    assert_kind_of Pecorino::Throttle::State, blocked_state
+    assert_kind_of Pecorino::Throttle::State, blocked_state_from_cache
+    assert_predicate blocked_state, :blocked?
+    assert_predicate blocked_state_from_cache, :blocked?
+
+    # Delete the method on the actual throttle as it should not be called anymore until the block is lifted
+    class << throttle
+      undef :state
+    end
+
+    state_from_cache = cached_throttle.state
+    assert_kind_of Pecorino::Throttle::State, state_from_cache
+    assert_predicate state_from_cache, :blocked?
+  end
 end
