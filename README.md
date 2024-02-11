@@ -126,6 +126,29 @@ We recommend running the following bit of code every couple of hours (via cron o
 Pecorino.prune!
 ```
 
+## Using cached throttles
+
+If a throttle is triggered, Pecorino sets a "block" record for that throttle key. Any request to that throttle will fail until the block is lifted. If you are getting hammered by requests which are getting throttled, it might be a good idea to install a caching layer which will respond with a "rate limit exceeded" error even before hitting your database - until the moment when the block would be lifted. You can use any [ActiveSupport::Cache::Store](https://api.rubyonrails.org/classes/ActiveSupport/Cache/Store.html) to store your blocks. If you have a fast Rails cache configured, create a wrapped throttle:
+
+```ruby
+throttle = Pecorino::Throttle.new(key: "ip-#{request.ip}", capacity: 10, over_time: 2.seconds, block_for: 2.minutes)
+cached_throttle = Pecorino::CachedThrottle.new(Rails.cache, throttle)
+cached_throttle.request!
+```
+
+Note that the idea of using a cache store here is to avoid hitting the database when the block for your throttle is in effect. Therefore, if you are using something like [solid_cache](https://github.com/rails/solid_cache) you will be hitting the database regardless! A better approach is to have a [MemoryStore](https://api.rubyonrails.org/classes/ActiveSupport/Cache/MemoryStore.html) just for throttles - it will be local to your Rails process. This will avoid a database roundtrip once the process knows a particular throttle is being blocked at the moment:
+
+```ruby
+# in application.rb
+config.pecorino_throttle_cache = ActiveSupport::Cache::MemoryStore.new
+
+# in your controller
+
+throttle = Pecorino::Throttle.new(key: "ip-#{request.ip}", capacity: 10, over_time: 2.seconds, block_for: 2.minutes)
+cached_throttle = Pecorino::CachedThrottle.new(Rails.application.config.pecorino_throttle_cache, throttle)
+cached_throttle.request!
+```
+
 ## Using unlogged tables for reduced replication load (PostgreSQL)
 
 Throttles and leaky buckets are transient resources. If you are using Postgres replication, it might be prudent to set the Pecorino tables to `UNLOGGED` which will exclude them from replication - and save you bandwidth and storage on your RR. To do so, add the following statements to your migration:
