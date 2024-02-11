@@ -6,23 +6,28 @@
 # the block is lifted. The block time can be arbitrarily higher or lower than the amount
 # of time it takes for the leaky bucket to leak out
 class Pecorino::Throttle
-  State = Struct.new(:blocked_until) do
-    # Tells whether this throttle is blocked, either due to the leaky bucket having filled up
-    # or due to there being a timed block set because of an earlier event of the bucket having
-    # filled up
-    def blocked?
-      blocked_until ? true : false
+  # The state represents a snapshot of the throttle state in time
+  class State
+    # @return [Time]
+    attr_reader :blocked_until
+
+    def initialize(blocked_until)
+      @blocked_until = blocked_until
     end
 
-    # Returns the number of seconds until the block will be lifted, rouded up to the closest
-    # whole second. This value can be used in a "Retry-After" HTTP response header.
+    # Tells whether this throttle still is in the blocked state.
+    # If the `blocked_until` value lies in the past, the method will
+    # return `false` - this is done so that the `State` can be cached.
     #
-    # @return [Integer]
-    def retry_after
-      (blocked_until - Time.now.utc).ceil
+    # @return [Boolean]
+    def blocked?
+      !!(@blocked_until && @blocked_until > Time.now)
     end
   end
 
+  # {Pecorino::Throttle} will raise this exception from `request!`. The exception can be used
+  # to do matching, for setting appropriate response headers, and for distinguishing between
+  # multiple different throttles.
   class Throttled < StandardError
     # Returns the throttle which raised the exception. Can be used to disambiguiate between
     # multiple Throttled exceptions when multiple throttles are applied in a layered fashion:
@@ -34,18 +39,53 @@ class Pecorino::Throttle
     #      db_insert_throttle.request!(n_items_to_insert)
     #    rescue Pecorino::Throttled => e
     #      deliver_notification(user) if e.throttle == user_email_throttle
+    #      firewall.ban_ip(ip) if e.throttle == ip_addr_throttle
     #    end
     #
     # @return [Throttle]
     attr_reader :throttle
 
-    # Returns the `retry_after` value in seconds, suitable for use in an HTTP header
-    attr_reader :retry_after
+    # Returns the throttle state based on which the exception is getting raised. This can
+    # be used for caching the exception, because the state can tell when the block will be
+    # lifted. This can be used to shift the throttle verification into a faster layer of the
+    # system (like a blocklist in a firewall) or caching the state in an upstream cache. A block
+    # in Pecorino is set once and is active until expiry. If your service is under an attack
+    # and you know that the call is blocked until a certain future time, the block can be
+    # lifted up into a faster/cheaper storage destination, like Rails cache:
+    #
+    # @example
+    #    begin
+    #      ip_addr_throttle.request!
+    #    rescue Pecorino::Throttled => e
+    #      firewall.ban_ip(request.ip, ttl_seconds: e.state.retry_after)
+    #      render :rate_limit_exceeded
+    #    end
+    #
+    # @example
+    #    state = Rails.cache.read(ip_addr_throttle.key)
+    #    return render :rate_limit_exceeded if state && state.blocked? # No need to call Pecorino for this
+    #
+    #    begin
+    #      ip_addr_throttle.request!
+    #    rescue Pecorino::Throttled => e
+    #      Rails.cache.write(ip_addr_throttle.key, e.state, expires_in: (e.state.blocked_until - Time.now))
+    #      render :rate_limit_exceeded
+    #    end
+    #
+    # @return [Throttle::State]
+    attr_reader :state
 
     def initialize(from_throttle, state)
       @throttle = from_throttle
-      @retry_after = state.retry_after
+      @state = state
       super("Block in effect until #{state.blocked_until.iso8601}")
+    end
+
+    # Returns the `retry_after` value in seconds, suitable for use in an HTTP header
+    #
+    # @return [Integer]
+    def retry_after
+      (@state.blocked_until - Time.now).ceil
     end
   end
 
@@ -73,8 +113,8 @@ class Pecorino::Throttle
   end
 
   # Register that a request is being performed. Will raise Throttled
-  # if there is a block in place on that key, or if the bucket has been filled up
-  # and a block has been put in place as a result of this particular request.
+  # if there is a block in place for that throttle, or if the bucket cannot accept
+  # this fillup and the block has just been installed as a result of this particular request.
   #
   # The exception can be rescued later to provide a 429 response. This method is better
   # to use before performing the unit of work that the throttle is guarding:
@@ -89,11 +129,11 @@ class Pecorino::Throttle
   #
   # If the method call succeeds it means that the request is not getting throttled.
   #
-  # @return void
+  # @return [State] the state of the throttle after filling up the leaky bucket / trying to pass the block
   def request!(n = 1)
-    state = request(n)
-    raise Throttled.new(self, state) if state.blocked?
-    nil
+    request(n).tap do |state_after|
+      raise Throttled.new(self, state_after) if state_after.blocked?
+    end
   end
 
   # Register that a request is being performed. Will not raise any exceptions but return
