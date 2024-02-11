@@ -1,3 +1,7 @@
+- **BREAKING CHANGE** Remove `Throttle::State#retry_after`, because there is no reasonable value for that member if the throttle is not in the "blocked" state
+- Allow accessing `Throttle::State` from the `Throttled` exception so that the blocked throttle state can be cached downstream (in Rails cache, for example)
+- Make `Throttle#request!` return the new state if there was no exception raised
+
 ## [0.4.1] - 2024-02-11
 
 - Make sure Pecorino works on Ruby 2.7 as well by removing 3.x-exclusive syntax
