@@ -17,16 +17,14 @@ class Pecorino::CachedThrottle
 
   # @see Pecorino::Throttle#request!
   def request!(n = 1)
-    blocked_state = cached_blocked_state
-    if blocked_state&.blocked?
-      raise Pecorino::Throttle::Throttled.new(@throttle, blocked_state)
-    else
-      begin
-        @throttle.request!(n)
-      rescue Pecorino::Throttle::Throttled => throttled_ex
-        cache_blocked_state(throttled_ex.state) if throttled_ex.throttle == @throttle
-        raise
-      end
+    blocked_state = read_cached_blocked_state
+    raise Pecorino::Throttle::Throttled.new(@throttle, blocked_state) if blocked_state&.blocked?
+
+    begin
+      @throttle.request!(n)
+    rescue Pecorino::Throttle::Throttled => throttled_ex
+      write_cache_blocked_state(throttled_ex.state) if throttled_ex.throttle == @throttle
+      raise
     end
   end
 
@@ -34,11 +32,11 @@ class Pecorino::CachedThrottle
   #
   # @see Pecorino::Throttle#request
   def request(n = 1)
-    blocked_state = cached_blocked_state
+    blocked_state = read_cached_blocked_state
     return blocked_state if blocked_state&.blocked?
 
     @throttle.request(n).tap do |state|
-      cache_blocked_state(state) if state.blocked_until
+      write_cache_blocked_state(state) if state.blocked_until
     end
   end
 
@@ -46,7 +44,7 @@ class Pecorino::CachedThrottle
   #
   # @see Pecorino::Throttle#able_to_accept?
   def able_to_accept?(n = 1)
-    blocked_state = cached_blocked_state
+    blocked_state = read_cached_blocked_state
     return false if blocked_state&.blocked?
 
     @throttle.able_to_accept?(n)
@@ -72,21 +70,22 @@ class Pecorino::CachedThrottle
   #
   # @see Pecorino::Throttle#able_to_accept?
   def state
-    blocked_state = cached_blocked_state
+    blocked_state = read_cached_blocked_state
+    warn "Read blocked state #{blocked_state.inspect}"
     return blocked_state if blocked_state&.blocked?
 
     @throttle.state.tap do |state|
-      cache_blocked_state(state) if state.blocked?
+      write_cache_blocked_state(state) if state.blocked?
     end
   end
 
   private
 
-  def cache_blocked_state(state)
+  def write_cache_blocked_state(state)
     @cache_store.write("pecorino-cached-throttle-state-#{@throttle.key}", state, expires_after: state.blocked_until)
   end
 
-  def cached_blocked_state
+  def read_cached_blocked_state
     @cache_store.read("pecorino-cached-throttle-state-#{@throttle.key}")
   end
 end
