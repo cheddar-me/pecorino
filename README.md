@@ -1,10 +1,10 @@
 # Pecorino
 
-Pecorino is a rate limiter based on the concept of leaky buckets. It uses your DB as the storage backend for the throttles. It is compact, easy to install, and does not require additional infrastructure. The approach used by Pecorino has been previously used by [prorate](https://github.com/WeTransfer/prorate) with Redis, and that approach has proven itself.
+Pecorino is a rate limiter based on the concept of leaky buckets, or more specifically - based on the [generic cell rate](https://brandur.org/rate-limiting) algorithm. It uses your DB as the storage backend for the throttles. It is compact, easy to install, and does not require additional infrastructure. The approach used by Pecorino has been previously used by [prorate](https://github.com/WeTransfer/prorate) with Redis, and that approach has proven itself.
 
 Pecorino is designed to integrate seamlessly into any Rails application using a PostgreSQL or SQLite database (at the moment there is no MySQL support, we would be delighted if you could add it).
 
-If you would like to know more about the leaky bucket algorithm: [this article](http://live.julik.nl/2022/08/the-unreasonable-effectiveness-of-leaky-buckets) or the [Wikipedia article](https://en.wikipedia.org/wiki/Leaky_bucket) are both good starting points.
+If you would like to know more about the leaky bucket algorithm: [this article](http://live.julik.nl/2022/08/the-unreasonable-effectiveness-of-leaky-buckets) or the [Wikipedia article](https://en.wikipedia.org/wiki/Leaky_bucket) are both good starting points. [This Wikipedia article](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm) describes the generic cell rate algorithm in more detail as well.
 
 ## Installation
 
