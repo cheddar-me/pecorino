@@ -190,4 +190,10 @@ class Pecorino::Adapters::SqliteAdapter < Pecorino::Adapters::DatabaseAdapter
     blocked_until_s = model_class.connection.uncached { model_class.connection.select_value(block_check_query) }
     blocked_until_s && Time.at(blocked_until_s)
   end
+
+  def prune
+    now_s = Time.now.to_f
+    model_class.connection.execute("DELETE FROM pecorino_blocks WHERE blocked_until < ?", now_s)
+    model_class.connection.execute("DELETE FROM pecorino_leaky_buckets WHERE may_be_deleted_after < ?", now_s)
+  end
 end

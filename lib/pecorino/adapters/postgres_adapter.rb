@@ -163,4 +163,9 @@ class Pecorino::Adapters::PostgresAdapter < Pecorino::Adapters::DatabaseAdapter
     SQL
     model_class.connection.uncached { model_class.connection.select_value(block_check_query) }
   end
+
+  def prune
+    model_class.connection.execute("DELETE FROM pecorino_blocks WHERE blocked_until < NOW()")
+    model_class.connection.execute("DELETE FROM pecorino_leaky_buckets WHERE may_be_deleted_after < NOW()")
+  end
 end

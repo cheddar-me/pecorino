@@ -229,6 +229,7 @@ module AdapterTestMethods
   end
 
   def test_create_tables
+    adapter = create_adapter # Has to be in local scope
     ActiveRecord::Schema.define(version: 1) do |via_definer|
       adapter.create_tables(via_definer)
     end
