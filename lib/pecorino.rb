@@ -13,6 +13,7 @@ module Pecorino
   autoload :CachedThrottle, "pecorino/cached_throttle"
 
   module Adapters
+    autoload :MemoryAdapter, "pecorino/adapters/memory_adapter"
     autoload :DatabaseAdapter, "pecorino/adapters/database_adapter"
     autoload :PostgresAdapter, "pecorino/adapters/postgres_adapter"
     autoload :SqliteAdapter, "pecorino/adapters/sqlite_adapter"
@@ -43,7 +44,7 @@ module Pecorino
   # Returns the database implementation for setting the values atomically. Since the implementation
   # differs per database, this method will return a different adapter depending on which database is
   # being used
-  def self.adapter
+  def self.adapter # default_adapter_from_main_database
     model_class = ActiveRecord::Base
     adapter_name = model_class.connection.adapter_name
     case adapter_name

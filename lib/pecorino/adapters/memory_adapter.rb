@@ -92,9 +92,8 @@ class Pecorino::Adapters::MemoryAdapter
   # is not defined - the call should always succeed.
   def set_block(key:, block_for:)
     @lock.lock(key)
-    now = get_mono_time
-    expire_at = now + block_for.to_f
-    @blocks[key] = expire_at
+    @blocks[key] = get_mono_time + block_for.to_f
+    Time.now + block_for.to_f
   ensure
     @lock.unlock(key)
   end
@@ -115,8 +114,8 @@ class Pecorino::Adapters::MemoryAdapter
   # now lapsed
   def prune
     now_monotonic = get_mono_time
-    @blocks.delete_if {|_, blocked_until_monotonic| blocked_until_monotonic < now_monotonic }
-    @buckets.delete_if {|_, (_level, expire_at_monotonic)| expire_at_monotonic < now_monotonic }
+    @blocks.delete_if { |_, blocked_until_monotonic| blocked_until_monotonic < now_monotonic }
+    @buckets.delete_if { |_, (_level, expire_at_monotonic)| expire_at_monotonic < now_monotonic }
   end
 
   # No-op

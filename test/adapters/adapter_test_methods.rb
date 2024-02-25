@@ -106,11 +106,11 @@ module AdapterTestMethods
     leak_rate = 2
     capacity = 1
 
-    level, is_full, did_accept = adapter.add_tokens_conditionally(key: k, capacity: capacity, leak_rate: leak_rate, n_tokens: 0.5)
+    level, _, did_accept = adapter.add_tokens_conditionally(key: k, capacity: capacity, leak_rate: leak_rate, n_tokens: 0.5)
     assert_in_delta level, 0.5, LEVEL_DELTA
     assert_equal did_accept, true
 
-    level, is_full, did_accept = adapter.add_tokens_conditionally(key: k, capacity: capacity, leak_rate: leak_rate, n_tokens: 0.5)
+    level, _, did_accept = adapter.add_tokens_conditionally(key: k, capacity: capacity, leak_rate: leak_rate, n_tokens: 0.5)
     assert_in_delta level, 1.0, LEVEL_DELTA
     assert_equal did_accept, true
   end
@@ -139,7 +139,7 @@ module AdapterTestMethods
 
     level, is_full, did_accept = adapter.add_tokens_conditionally(key: k, capacity: capacity, leak_rate: leak_rate, n_tokens: 0.3)
     assert_in_delta level, 0.9, LEVEL_DELTA
-    assert_equal is_full, false 
+    assert_equal is_full, false
     assert_equal did_accept, false
   end
 
@@ -151,7 +151,7 @@ module AdapterTestMethods
     counter = 0
     try_fillup = ->(fillup_by, should_have_reached_level, should_have_accepted) {
       counter += 1
-      level, became_full, did_accept = adapter.add_tokens_conditionally(key: key, capacity: capacity, leak_rate: leak_rate, n_tokens: fillup_by)
+      level, _, did_accept = adapter.add_tokens_conditionally(key: key, capacity: capacity, leak_rate: leak_rate, n_tokens: fillup_by)
       assert_equal did_accept, should_have_accepted, "Update #{counter} did_accept should be #{should_have_accepted}"
       assert_in_delta should_have_reached_level, level, 0.1
     }
@@ -182,7 +182,36 @@ module AdapterTestMethods
 
     sleep 0.6 # Spend enough time to allow the bucket to leak out completely
     _, _, did_accept = adapter.add_tokens_conditionally(key: key, capacity: capacity, leak_rate: leak_rate, n_tokens: 1)
-    assert did_accept,  "Once the bucket has leaked out to 0 the fillup should be accepted again"
+    assert did_accept, "Once the bucket has leaked out to 0 the fillup should be accepted again"
+  end
+
+  def test_set_block_sets_a_block
+    key = random_key
+    now = Time.now.utc
+    block_duration_s = 2.2
+
+    assert_nil adapter.blocked_until(key: key)
+
+    set_block_result = adapter.set_block(key: key, block_for: block_duration_s)
+    assert_kind_of Time, set_block_result
+    assert_in_delta now + block_duration_s, set_block_result, 0.1
+
+    blocked_until = adapter.blocked_until(key: key)
+    assert_in_delta blocked_until, set_block_result, 0.1
+  end
+
+  def test_set_block_does_not_set_block_in_the_past
+    key = random_key
+    now = Time.now.utc
+    block_duration_s = -20
+
+    assert_nil adapter.blocked_until(key: key)
+    set_block_result = adapter.set_block(key: key, block_for: block_duration_s)
+    assert_kind_of Time, set_block_result
+    assert_in_delta now + block_duration_s, set_block_result, 0.1
+
+    blocked_until = adapter.blocked_until(key: key)
+    assert_nil blocked_until
   end
 
   def test_prune
@@ -221,7 +250,7 @@ module AdapterTestMethods
     end
     threads.map(&:join)
 
-    level, is_full = adapter.state(key: k, capacity: capacity, leak_rate: leak_rate)
+    level, _ = adapter.state(key: k, capacity: capacity, leak_rate: leak_rate)
     assert_in_delta level, (3 * 9), LEVEL_DELTA
   end
 end
