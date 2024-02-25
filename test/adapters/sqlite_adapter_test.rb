@@ -1,16 +1,13 @@
 require_relative "../test_helper"
 require_relative "adapter_test_methods"
 
-class MemoryAdapterTest < Minitest::Test
+class SqliteAdapterTest < ActiveSupport::TestCase
   include AdapterTestMethods
 
-  def setup
-    @adapter = Pecorino::Adapters::MemoryAdapter.new
-    super
-  end
+  setup { create_sqlite_db }
+  teardown { drop_sqlite_db }
 
-  def teardown
-    @adapter = nil
-    super
+  def create_adapter
+    Pecorino::Adapters::SqliteAdapter.new(ActiveRecord::Base)
   end
 end
