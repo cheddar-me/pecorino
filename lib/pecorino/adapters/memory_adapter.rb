@@ -2,17 +2,42 @@
 
 # A memory store for leaky buckets and blocks
 class Pecorino::Adapters::MemoryAdapter
+  class KeyedLock
+    def initialize
+      @locked_keys = Set.new
+      @lock_mutex = Mutex.new
+    end
+
+    def lock(key)
+      loop do
+        @lock_mutex.synchronize do
+          next if @locked_keys.include?(key)
+          @locked_keys << key
+          return
+        end
+      end
+    end
+
+    def unlock(key)
+      @lock_mutex.synchronize do
+        @locked_keys.delete(key)
+      end
+    end
+  end
+
   def initialize
     @buckets = {}
     @blocks = {}
-    @locked_keys = Set.new
-    @lock_mutex = Mutex.new
+    @lock = KeyedLock.new
   end
 
   # Returns the state of a leaky bucket. The state should be a tuple of two
   # values: the current level (Float) and whether the bucket is now at capacity (Boolean)
   def state(key:, capacity:, leak_rate:)
+    @lock.lock(key)
     level, ts = @buckets[key]
+    @lock.unlock(key)
+
     return [0, false] unless level
 
     dt = get_mono_time - ts
@@ -23,7 +48,7 @@ class Pecorino::Adapters::MemoryAdapter
   # Adds tokens to the leaky bucket. The return value is a tuple of two
   # values: the current level (Float) and whether the bucket is now at capacity (Boolean)
   def add_tokens(key:, capacity:, leak_rate:, n_tokens:)
-    lock(key)
+    @lock.lock(key)
     now = get_mono_time
     level, ts, _ = @buckets[key] || [0.0, now]
 
@@ -35,7 +60,7 @@ class Pecorino::Adapters::MemoryAdapter
 
     [level_after_fillup, (level_after_fillup - capacity) >= 0]
   ensure
-    unlock(key)
+    @lock.unlock(key)
   end
 
   # Adds tokens to the leaky bucket conditionally. If there is capacity, the tokens will
@@ -43,7 +68,7 @@ class Pecorino::Adapters::MemoryAdapter
   # the current level (Float), whether the bucket is now at capacity (Boolean)
   # and whether the fillup was accepted (Boolean)
   def add_tokens_conditionally(key:, capacity:, leak_rate:, n_tokens:)
-    lock(key)
+    @lock.lock(key)
     now = get_mono_time
     level, ts, _ = @buckets[key] || [0.0, now]
 
@@ -60,18 +85,18 @@ class Pecorino::Adapters::MemoryAdapter
 
     [clamped_level_after_fillup, clamped_level_after_fillup == capacity, _did_accept = true]
   ensure
-    unlock(key)
+    @lock.unlock(key)
   end
 
   # Sets a timed block for the given key - this is used when a throttle fires. The return value
   # is not defined - the call should always succeed.
   def set_block(key:, block_for:)
-    lock(key)
+    @lock.lock(key)
     now = get_mono_time
     expire_at = now + block_for.to_f
     @blocks[key] = expire_at
   ensure
-    unlock(key)
+    @lock.unlock(key)
   end
 
   # Returns the time until which a block for a given key is in effect. If there is no block in
@@ -99,12 +124,6 @@ class Pecorino::Adapters::MemoryAdapter
   end
 
   private
-
-  def lock(key)
-  end
-
-  def unlock(key)
-  end
 
   def get_mono_time
     Process.clock_gettime(Process::CLOCK_MONOTONIC)

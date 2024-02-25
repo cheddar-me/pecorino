@@ -200,12 +200,11 @@ module AdapterTestMethods
   end
 
   def test_create_tables
-    # Calling this method should not raise
-    return unless ActiveRecord::Base.connection_established?
-
     ActiveRecord::Schema.define(version: 1) do |via_definer|
       adapter.create_tables(via_definer)
     end
+  rescue ActiveRecord::ConnectionNotEstablished
+    # This adapter does not require a connection
   end
 
   def xtest_should_accept_threadsafe_conditional_fillups
