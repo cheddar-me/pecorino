@@ -2,8 +2,11 @@ module AdapterTestMethods
   LEVEL_DELTA = 0.1
 
   def adapter
-    return @adapter if @adapter
-    raise "Adapter test subclass needs to return an adapter implementation from here. If the object holds state, it should be the same during a test case."
+    @adapter ||= create_adapter
+  end
+
+  def create_adapter
+    raise "Adapter test subclass needs to return an adapter implementation from here."
   end
 
   def random_key
