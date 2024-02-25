@@ -207,4 +207,22 @@ module AdapterTestMethods
       adapter.create_tables(via_definer)
     end
   end
+
+  def xtest_should_accept_threadsafe_conditional_fillups
+    k = random_key
+    capacity = 30
+    leak_rate = capacity / 0.5
+
+    threads = 3.times.map do
+      Thread.new do
+        9.times do
+          adapter.add_tokens_conditionally(key: k, leak_rate: leak_rate, capacity: capacity, n_tokens: 1)
+        end
+      end
+    end
+    threads.map(&:join)
+
+    level, is_full = adapter.state(key: k, capacity: capacity, leak_rate: leak_rate)
+    assert_in_delta level, (3 * 9), LEVEL_DELTA
+  end
 end
