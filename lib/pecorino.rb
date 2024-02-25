@@ -17,6 +17,7 @@ module Pecorino
     autoload :DatabaseAdapter, "pecorino/adapters/database_adapter"
     autoload :PostgresAdapter, "pecorino/adapters/postgres_adapter"
     autoload :SqliteAdapter, "pecorino/adapters/sqlite_adapter"
+    autoload :RedisAdapter, "pecorino/adapters/redis_adapter"
   end
 
   # Deletes stale leaky buckets and blocks which have expired. Run this method regularly to
