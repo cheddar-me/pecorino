@@ -43,7 +43,7 @@ local bucket_level_after_fillup = bucket_level_after_leaking + fillup
 local did_accept = 0
 
 -- Figure out whether the fillup would overflow the bucket
-if conditional_fillup and bucket_level_after_fillup > bucket_capacity then
+if conditional_fillup == 1 and bucket_level_after_fillup > bucket_capacity then
   local at_capacity = bucket_level_after_leaking >= bucket_capacity
   -- See below about string return
   return {string.format("%.9f", bucket_level_after_leaking), at_capacity, did_accept}
