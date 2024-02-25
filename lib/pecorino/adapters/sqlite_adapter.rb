@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-Pecorino::Sqlite = Struct.new(:model_class) do
+class Pecorino::Adapters::SqliteAdapter < Pecorino::Adapters::DatabaseAdapter
   def state(key:, capacity:, leak_rate:)
     # With a server database, it is really important to use the clock of the database itself so
     # that concurrent requests will see consistent bucket level calculations. Since SQLite is

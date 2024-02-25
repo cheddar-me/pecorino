@@ -7,24 +7,23 @@ require_relative "pecorino/version"
 require_relative "pecorino/railtie" if defined?(Rails::Railtie)
 
 module Pecorino
-  autoload :Postgres, "pecorino/postgres"
-  autoload :Sqlite, "pecorino/sqlite"
   autoload :LeakyBucket, "pecorino/leaky_bucket"
   autoload :Block, "pecorino/block"
   autoload :Throttle, "pecorino/throttle"
   autoload :CachedThrottle, "pecorino/cached_throttle"
+
+  module Adapters
+    autoload :DatabaseAdapter, "pecorino/adapters/database_adapter"
+    autoload :PostgresAdapter, "pecorino/adapters/postgres_adapter"
+    autoload :SqliteAdapter, "pecorino/adapters/sqlite_adapter"
+  end
 
   # Deletes stale leaky buckets and blocks which have expired. Run this method regularly to
   # avoid accumulating too many unused rows in your tables.
   #
   # @return void
   def self.prune!
-    # Delete all the old blocks here (if we are under a heavy swarm of requests which are all
-    # blocked it is probably better to avoid the big delete)
-    ActiveRecord::Base.connection.execute("DELETE FROM pecorino_blocks WHERE blocked_until < NOW()")
-
-    # Prune buckets which are no longer used. No "uncached" needed here since we are using "execute"
-    ActiveRecord::Base.connection.execute("DELETE FROM pecorino_leaky_buckets WHERE may_be_deleted_after < NOW()")
+    adapter.prune
   end
 
   # Creates the tables and indexes needed for Pecorino. Call this from your migrations like so:
@@ -38,21 +37,7 @@ module Pecorino
   # @param active_record_schema[ActiveRecord::SchemaMigration] the migration through which we will create the tables
   # @return void
   def self.create_tables(active_record_schema)
-    active_record_schema.create_table :pecorino_leaky_buckets, id: :uuid do |t|
-      t.string :key, null: false
-      t.float :level, null: false
-      t.datetime :last_touched_at, null: false
-      t.datetime :may_be_deleted_after, null: false
-    end
-    active_record_schema.add_index :pecorino_leaky_buckets, [:key], unique: true
-    active_record_schema.add_index :pecorino_leaky_buckets, [:may_be_deleted_after]
-
-    active_record_schema.create_table :pecorino_blocks, id: :uuid do |t|
-      t.string :key, null: false
-      t.datetime :blocked_until, null: false
-    end
-    active_record_schema.add_index :pecorino_blocks, [:key], unique: true
-    active_record_schema.add_index :pecorino_blocks, [:blocked_until]
+    adapter.create_tables(active_record_schema)
   end
 
   # Returns the database implementation for setting the values atomically. Since the implementation
@@ -63,9 +48,9 @@ module Pecorino
     adapter_name = model_class.connection.adapter_name
     case adapter_name
     when /postgres/i
-      Pecorino::Postgres.new(model_class)
+      Pecorino::Adapters::PostgresAdapter.new(model_class)
     when /sqlite/i
-      Pecorino::Sqlite.new(model_class)
+      Pecorino::Adapters::SqliteAdapter.new(model_class)
     else
       raise "Pecorino does not support #{adapter_name} just yet"
     end

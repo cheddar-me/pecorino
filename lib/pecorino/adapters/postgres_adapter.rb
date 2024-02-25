@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-Pecorino::Postgres = Struct.new(:model_class) do
+class Pecorino::Adapters::PostgresAdapter < Pecorino::Adapters::DatabaseAdapter
   def state(key:, capacity:, leak_rate:)
     query_params = {
       key: key.to_s,
