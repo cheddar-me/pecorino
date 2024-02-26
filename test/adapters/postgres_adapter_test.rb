@@ -30,7 +30,7 @@ class PostgresAdapterTest < ActiveSupport::TestCase
   def create_postgres_database
     ActiveRecord::Migration.verbose = false
     ActiveRecord::Base.establish_connection(adapter: "postgresql", database: "postgres")
-    ActiveRecord::Base.connection.create_database("pecorino_tests_%s" % seed_db_name, charset: :unicode)
+    ActiveRecord::Base.connection.create_database(SEED_DB_NAME.call, charset: :unicode)
     ActiveRecord::Base.connection.close
     ActiveRecord::Base.establish_connection(adapter: "postgresql", encoding: "unicode", database: SEED_DB_NAME.call)
   end
