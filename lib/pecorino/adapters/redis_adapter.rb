@@ -67,7 +67,7 @@ class Pecorino::Adapters::RedisAdapter < Pecorino::Adapters::BaseAdapter
   # Sets a timed block for the given key - this is used when a throttle fires. The return value
   # is not defined - the call should always succeed.
   def set_block(key:, block_for:)
-    return unless block_for > 0
+    raise ArgumentError, "block_for must be positive" unless block_for > 0
     blocked_until = Time.now + block_for
     with_redis do |r|
       r.setex("#{@key_prefix}:leaky_bucket:#{key}:block", block_for.to_f.ceil, blocked_until.to_f)
@@ -81,6 +81,7 @@ class Pecorino::Adapters::RedisAdapter < Pecorino::Adapters::BaseAdapter
     seconds_from_epoch = with_redis do |r|
       r.get("#{@key_prefix}:leaky_bucket:#{key}:block")
     end
+    return unless seconds_from_epoch
     Time.at(seconds_from_epoch.to_f).utc
   end
 

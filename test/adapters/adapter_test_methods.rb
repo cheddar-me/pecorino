@@ -202,16 +202,16 @@ module AdapterTestMethods
 
   def test_set_block_does_not_set_block_in_the_past
     key = random_key
-    now = Time.now.utc
-    block_duration_s = -20
-
     assert_nil adapter.blocked_until(key: key)
-    set_block_result = adapter.set_block(key: key, block_for: block_duration_s)
-    assert_kind_of Time, set_block_result
-    assert_in_delta now + block_duration_s, set_block_result, 0.1
+    assert_raise(ArgumentError) {  adapter.set_block(key: key, block_for: -20) }
+    assert_nil adapter.blocked_until(key: key)
+  end
 
-    blocked_until = adapter.blocked_until(key: key)
-    assert_nil blocked_until
+  def test_set_block_does_not_set_block_which_would_expire_immediately
+    key = random_key
+    assert_nil adapter.blocked_until(key: key)
+    assert_raise(ArgumentError) {  adapter.set_block(key: key, block_for: 0) }
+    assert_nil adapter.blocked_until(key: key)
   end
 
   def test_prune

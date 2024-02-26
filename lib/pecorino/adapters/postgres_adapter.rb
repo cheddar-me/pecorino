@@ -144,6 +144,7 @@ class Pecorino::Adapters::PostgresAdapter < Pecorino::Adapters::DatabaseAdapter
   end
 
   def set_block(key:, block_for:)
+    raise ArgumentError, "block_for must be positive" unless block_for > 0
     query_params = {key: key.to_s, block_for: block_for.to_f}
     block_set_query = model_class.sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_blocks AS t

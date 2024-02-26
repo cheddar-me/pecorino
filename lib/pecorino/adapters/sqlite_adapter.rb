@@ -163,6 +163,7 @@ class Pecorino::Adapters::SqliteAdapter < Pecorino::Adapters::DatabaseAdapter
   end
 
   def set_block(key:, block_for:)
+    raise ArgumentError, "block_for must be positive" unless block_for > 0
     query_params = {id: SecureRandom.uuid, key: key.to_s, block_for: block_for.to_f, now_s: Time.now.to_f}
     block_set_query = model_class.sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_blocks AS t

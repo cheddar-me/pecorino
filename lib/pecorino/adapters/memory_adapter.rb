@@ -91,6 +91,7 @@ class Pecorino::Adapters::MemoryAdapter
   # Sets a timed block for the given key - this is used when a throttle fires. The return value
   # is not defined - the call should always succeed.
   def set_block(key:, block_for:)
+    raise ArgumentError, "block_for must be positive" unless block_for > 0
     @lock.lock(key)
     @blocks[key] = get_mono_time + block_for.to_f
     Time.now + block_for.to_f
