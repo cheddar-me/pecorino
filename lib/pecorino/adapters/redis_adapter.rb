@@ -4,8 +4,8 @@ require_relative "base_adapter"
 require "digest"
 require "redis"
 
-# An adapter allows Pecorino throttles, leaky buckets and other
-# resources to interfact to a data storage backend - a database, usually.
+# An adapter for storing Pecorino leaky buckets and blocks in Redis. It uses Lua
+# to enforce atomicity for leaky bucket operations
 class Pecorino::Adapters::RedisAdapter < Pecorino::Adapters::BaseAdapter
   class RedisScript
     def initialize(script_filename)
@@ -17,8 +17,6 @@ class Pecorino::Adapters::RedisAdapter < Pecorino::Adapters::BaseAdapter
       redis.evalsha(@sha, keys: keys, argv: argv)
     rescue Redis::CommandError => e
       if e.message.include? "NOSCRIPT"
-        # The Redis server has never seen this script before. Needs to run only once in the entire lifetime
-        # of the Redis server, until the script changes - in which case it will be loaded under a different SHA
         redis.script(:load, @script_body)
         retry
       else

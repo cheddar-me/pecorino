@@ -23,6 +23,13 @@ class Pecorino::Adapters::MemoryAdapter
         @locked_keys.delete(key)
       end
     end
+
+    def with(key)
+      lock(key)
+      yield
+    ensure
+      unlock(key)
+    end
   end
 
   def initialize
@@ -48,19 +55,7 @@ class Pecorino::Adapters::MemoryAdapter
   # Adds tokens to the leaky bucket. The return value is a tuple of two
   # values: the current level (Float) and whether the bucket is now at capacity (Boolean)
   def add_tokens(key:, capacity:, leak_rate:, n_tokens:)
-    @lock.lock(key)
-    now = get_mono_time
-    level, ts, _ = @buckets[key] || [0.0, now]
-
-    dt = now - ts
-    level_after_fillup = clamp(0, level - (leak_rate * dt) + n_tokens, capacity)
-
-    expire_after = now + (level_after_fillup / leak_rate)
-    @buckets[key] = [level_after_fillup, now, expire_after]
-
-    [level_after_fillup, (level_after_fillup - capacity) >= 0]
-  ensure
-    @lock.unlock(key)
+    add_tokens_with_lock(key, capacity, leak_rate, n_tokens, _conditionally  = false)
   end
 
   # Adds tokens to the leaky bucket conditionally. If there is capacity, the tokens will
@@ -68,24 +63,7 @@ class Pecorino::Adapters::MemoryAdapter
   # the current level (Float), whether the bucket is now at capacity (Boolean)
   # and whether the fillup was accepted (Boolean)
   def add_tokens_conditionally(key:, capacity:, leak_rate:, n_tokens:)
-    @lock.lock(key)
-    now = get_mono_time
-    level, ts, _ = @buckets[key] || [0.0, now]
-
-    dt = now - ts
-    level_after_leak = clamp(0, level - (leak_rate * dt), capacity)
-    level_after_fillup = level_after_leak + n_tokens
-    if level_after_fillup > capacity
-      return [level_after_leak, level_after_leak >= capacity, _did_accept = false]
-    end
-
-    clamped_level_after_fillup = clamp(0, level_after_fillup, capacity)
-    expire_after = now + (level_after_fillup / leak_rate)
-    @buckets[key] = [clamped_level_after_fillup, now, expire_after]
-
-    [clamped_level_after_fillup, clamped_level_after_fillup == capacity, _did_accept = true]
-  ensure
-    @lock.unlock(key)
+    add_tokens_with_lock(key, capacity, leak_rate, n_tokens, _conditionally  = true)
   end
 
   # Sets a timed block for the given key - this is used when a throttle fires. The return value
@@ -115,8 +93,18 @@ class Pecorino::Adapters::MemoryAdapter
   # now lapsed
   def prune
     now_monotonic = get_mono_time
-    @blocks.delete_if { |_, blocked_until_monotonic| blocked_until_monotonic < now_monotonic }
-    @buckets.delete_if { |_, (_level, expire_at_monotonic)| expire_at_monotonic < now_monotonic }
+
+    @blocks.delete_if do |key, blocked_until_monotonic|
+      @lock.with(key) do
+        blocked_until_monotonic < now_monotonic
+      end
+    end
+
+    @buckets.delete_if do |key, (_level, expire_at_monotonic)|
+      @lock.with(key) do
+        expire_at_monotonic < now_monotonic
+      end
+    end
   end
 
   # No-op
@@ -124,6 +112,27 @@ class Pecorino::Adapters::MemoryAdapter
   end
 
   private
+
+  def add_tokens_with_lock(key, capacity, leak_rate, n_tokens, conditionally)
+    @lock.lock(key)
+    now = get_mono_time
+    level, ts, _ = @buckets[key] || [0.0, now]
+
+    dt = now - ts
+    level_after_leak = clamp(0, level - (leak_rate * dt), capacity)
+    level_after_fillup = level_after_leak + n_tokens
+    if level_after_fillup > capacity && conditionally
+      return [level_after_leak, level_after_leak >= capacity, _did_accept = false]
+    end
+
+    clamped_level_after_fillup = clamp(0, level_after_fillup, capacity)
+    expire_after = now + (level_after_fillup / leak_rate)
+    @buckets[key] = [clamped_level_after_fillup, now, expire_after]
+
+    [clamped_level_after_fillup, clamped_level_after_fillup == capacity, _did_accept = true]
+  ensure
+    @lock.unlock(key)
+  end
 
   def get_mono_time
     Process.clock_gettime(Process::CLOCK_MONOTONIC)
