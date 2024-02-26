@@ -1,6 +1,7 @@
 -- Single threaded Leaky Bucket implementation (without blocking).
 -- args: key_base, leak_rate, bucket_ttl, fillup. To just verify the state of the bucket leak_rate of 0 may be passed.
--- returns: the leve of the bucket in number of tokens
+-- returns: the leve of the bucket in number of tokens.
+-- This script is largely adapted from Prorate https://github.com/WeTransfer/prorate
 
 -- this is required to be able to use TIME and writes; basically it lifts the script into IO
 redis.replicate_commands()
