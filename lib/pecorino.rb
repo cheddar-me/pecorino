@@ -42,10 +42,18 @@ module Pecorino
     adapter.create_tables(active_record_schema)
   end
 
+  def self.adapter=(adapter)
+    @adapter = adapter
+  end
+
+  def self.adapter
+    @adapter || default_adapter_from_main_database
+  end
+
   # Returns the database implementation for setting the values atomically. Since the implementation
   # differs per database, this method will return a different adapter depending on which database is
   # being used
-  def self.adapter # default_adapter_from_main_database
+  def self.default_adapter_from_main_database # default_adapter_from_main_database
     model_class = ActiveRecord::Base
     adapter_name = model_class.connection.adapter_name
     case adapter_name
