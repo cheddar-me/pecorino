@@ -7,4 +7,6 @@ class MemoryAdapterTest < ActiveSupport::TestCase
   def create_adapter
     Pecorino::Adapters::MemoryAdapter.new
   end
+
+  undef :test_create_tables
 end

@@ -235,8 +235,7 @@ module AdapterTestMethods
   end
 
   def test_create_tables
-    # All we are testing for is that the adapter responds to that method and accepts an argument
-    adapter.create_tables(nil)
+    raise "This has to either be a no-op in your test (if your adapter doesn't need any tables) or needs to be written"
   end
 
   def xtest_should_accept_threadsafe_conditional_fillups

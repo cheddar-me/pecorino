@@ -18,4 +18,6 @@ class RedisAdapterTest < ActiveSupport::TestCase
     r = Redis.new
     r.del(r.keys(key_prefix + "*"))
   end
+
+  undef :test_create_tables
 end

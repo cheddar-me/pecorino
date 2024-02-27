@@ -30,4 +30,16 @@ class SqliteAdapterTest < ActiveSupport::TestCase
   def create_adapter
     Pecorino::Adapters::SqliteAdapter.new(ActiveRecord::Base)
   end
+
+  def test_create_tables
+    ActiveRecord::Base.transaction do
+      ActiveRecord::Base.connection.execute("DROP TABLE pecorino_leaky_buckets")
+      ActiveRecord::Base.connection.execute("DROP TABLE pecorino_blocks")
+      # The adapter has to be in a variable as the schema definition is scoped to the migrator, not self
+      retained_adapter = create_adapter # the schema define block is run via instance_exec so it does not retain scope
+      ActiveRecord::Schema.define(version: 1) do |via_definer|
+        retained_adapter.create_tables(via_definer)
+      end
+    end
+  end
 end
