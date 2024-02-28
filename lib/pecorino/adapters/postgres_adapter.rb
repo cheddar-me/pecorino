@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
-class Pecorino::Adapters::PostgresAdapter < Pecorino::Adapters::DatabaseAdapter
+class Pecorino::Adapters::PostgresAdapter
+  def initialize(model_class)
+    @model_class = model_class
+  end
+
   def state(key:, capacity:, leak_rate:)
     query_params = {
       key: key.to_s,
@@ -10,7 +14,7 @@ class Pecorino::Adapters::PostgresAdapter < Pecorino::Adapters::DatabaseAdapter
     # The `level` of the bucket is what got stored at `last_touched_at` time, and we can
     # extrapolate from it to see how many tokens have leaked out since `last_touched_at` -
     # we don't need to UPDATE the value in the bucket here
-    sql = model_class.sanitize_sql_array([<<~SQL, query_params])
+    sql = @model_class.sanitize_sql_array([<<~SQL, query_params])
       SELECT
         GREATEST(
           0.0, LEAST(
@@ -26,7 +30,7 @@ class Pecorino::Adapters::PostgresAdapter < Pecorino::Adapters::DatabaseAdapter
 
     # If the return value of the query is a NULL it means no such bucket exists,
     # so we assume the bucket is empty
-    current_level = model_class.connection.uncached { model_class.connection.select_value(sql) } || 0.0
+    current_level = @model_class.connection.uncached { @model_class.connection.select_value(sql) } || 0.0
     [current_level, capacity - current_level.abs < 0.01]
   end
 
@@ -45,7 +49,7 @@ class Pecorino::Adapters::PostgresAdapter < Pecorino::Adapters::DatabaseAdapter
       fillup: n_tokens.to_f
     }
 
-    sql = model_class.sanitize_sql_array([<<~SQL, query_params])
+    sql = @model_class.sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_leaky_buckets AS t
         (key, last_touched_at, may_be_deleted_after, level)
       VALUES
@@ -79,7 +83,7 @@ class Pecorino::Adapters::PostgresAdapter < Pecorino::Adapters::DatabaseAdapter
     # query as a repeat (since we use "select_one" for the RETURNING bit) and will not call into Postgres
     # correctly, thus the clock_timestamp() value would be frozen between calls. We don't want that here.
     # See https://stackoverflow.com/questions/73184531/why-would-postgres-clock-timestamp-freeze-inside-a-rails-unit-test
-    upserted = model_class.connection.uncached { model_class.connection.select_one(sql) }
+    upserted = @model_class.connection.uncached { @model_class.connection.select_one(sql) }
     capped_level_after_fillup, at_capacity = upserted.fetch("level"), upserted.fetch("at_capacity")
     [capped_level_after_fillup, at_capacity]
   end
@@ -99,7 +103,7 @@ class Pecorino::Adapters::PostgresAdapter < Pecorino::Adapters::DatabaseAdapter
       fillup: n_tokens.to_f
     }
 
-    sql = model_class.sanitize_sql_array([<<~SQL, query_params])
+    sql = @model_class.sanitize_sql_array([<<~SQL, query_params])
       WITH pre AS MATERIALIZED (
         SELECT
           -- Note the double clamping here. First we clamp the "current level - leak" to not go below zero,
@@ -137,7 +141,7 @@ class Pecorino::Adapters::PostgresAdapter < Pecorino::Adapters::DatabaseAdapter
         level AS level_after
     SQL
 
-    upserted = model_class.connection.uncached { model_class.connection.select_one(sql) }
+    upserted = @model_class.connection.uncached { @model_class.connection.select_one(sql) }
     level_after = upserted.fetch("level_after")
     level_before = upserted.fetch("level_before")
     [level_after, level_after >= capacity, level_after != level_before]
@@ -146,7 +150,7 @@ class Pecorino::Adapters::PostgresAdapter < Pecorino::Adapters::DatabaseAdapter
   def set_block(key:, block_for:)
     raise ArgumentError, "block_for must be positive" unless block_for > 0
     query_params = {key: key.to_s, block_for: block_for.to_f}
-    block_set_query = model_class.sanitize_sql_array([<<~SQL, query_params])
+    block_set_query = @model_class.sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_blocks AS t
         (key, blocked_until)
       VALUES
@@ -155,18 +159,36 @@ class Pecorino::Adapters::PostgresAdapter < Pecorino::Adapters::DatabaseAdapter
         blocked_until = GREATEST(EXCLUDED.blocked_until, t.blocked_until)
       RETURNING blocked_until
     SQL
-    model_class.connection.uncached { model_class.connection.select_value(block_set_query) }
+    @model_class.connection.uncached { @model_class.connection.select_value(block_set_query) }
   end
 
   def blocked_until(key:)
-    block_check_query = model_class.sanitize_sql_array([<<~SQL, key])
+    block_check_query = @model_class.sanitize_sql_array([<<~SQL, key])
       SELECT blocked_until FROM pecorino_blocks WHERE key = ? AND blocked_until >= clock_timestamp() LIMIT 1
     SQL
-    model_class.connection.uncached { model_class.connection.select_value(block_check_query) }
+    @model_class.connection.uncached { @model_class.connection.select_value(block_check_query) }
   end
 
   def prune
-    model_class.connection.execute("DELETE FROM pecorino_blocks WHERE blocked_until < NOW()")
-    model_class.connection.execute("DELETE FROM pecorino_leaky_buckets WHERE may_be_deleted_after < NOW()")
+    @model_class.connection.execute("DELETE FROM pecorino_blocks WHERE blocked_until < NOW()")
+    @model_class.connection.execute("DELETE FROM pecorino_leaky_buckets WHERE may_be_deleted_after < NOW()")
+  end
+
+  def create_tables(active_record_schema)
+    active_record_schema.create_table :pecorino_leaky_buckets, id: :uuid do |t|
+      t.string :key, null: false
+      t.float :level, null: false
+      t.datetime :last_touched_at, null: false
+      t.datetime :may_be_deleted_after, null: false
+    end
+    active_record_schema.add_index :pecorino_leaky_buckets, [:key], unique: true
+    active_record_schema.add_index :pecorino_leaky_buckets, [:may_be_deleted_after]
+
+    active_record_schema.create_table :pecorino_blocks, id: :uuid do |t|
+      t.string :key, null: false
+      t.datetime :blocked_until, null: false
+    end
+    active_record_schema.add_index :pecorino_blocks, [:key], unique: true
+    active_record_schema.add_index :pecorino_blocks, [:blocked_until]
   end
 end

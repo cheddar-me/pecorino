@@ -14,7 +14,6 @@ module Pecorino
 
   module Adapters
     autoload :MemoryAdapter, "pecorino/adapters/memory_adapter"
-    autoload :DatabaseAdapter, "pecorino/adapters/database_adapter"
     autoload :PostgresAdapter, "pecorino/adapters/postgres_adapter"
     autoload :SqliteAdapter, "pecorino/adapters/sqlite_adapter"
     autoload :RedisAdapter, "pecorino/adapters/redis_adapter"
