@@ -87,7 +87,7 @@ class Pecorino::Adapters::RedisAdapter < Pecorino::Adapters::BaseAdapter
 
   def with_redis
     if @redis_pool.respond_to?(:with)
-      @redis_pool.with {|conn| yield(conn) }
+      @redis_pool.with { |conn| yield(conn) }
     else
       yield @redis_pool
     end

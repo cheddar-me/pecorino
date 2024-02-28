@@ -209,14 +209,14 @@ module AdapterTestMethods
   def test_set_block_does_not_set_block_in_the_past
     key = random_key
     assert_nil adapter.blocked_until(key: key)
-    assert_raise(ArgumentError) {  adapter.set_block(key: key, block_for: -20) }
+    assert_raise(ArgumentError) { adapter.set_block(key: key, block_for: -20) }
     assert_nil adapter.blocked_until(key: key)
   end
 
   def test_set_block_does_not_set_block_which_would_expire_immediately
     key = random_key
     assert_nil adapter.blocked_until(key: key)
-    assert_raise(ArgumentError) {  adapter.set_block(key: key, block_for: 0) }
+    assert_raise(ArgumentError) { adapter.set_block(key: key, block_for: 0) }
     assert_nil adapter.blocked_until(key: key)
   end
 

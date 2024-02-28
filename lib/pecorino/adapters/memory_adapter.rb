@@ -55,7 +55,7 @@ class Pecorino::Adapters::MemoryAdapter
   # Adds tokens to the leaky bucket. The return value is a tuple of two
   # values: the current level (Float) and whether the bucket is now at capacity (Boolean)
   def add_tokens(key:, capacity:, leak_rate:, n_tokens:)
-    add_tokens_with_lock(key, capacity, leak_rate, n_tokens, _conditionally  = false)
+    add_tokens_with_lock(key, capacity, leak_rate, n_tokens, _conditionally = false)
   end
 
   # Adds tokens to the leaky bucket conditionally. If there is capacity, the tokens will
@@ -63,7 +63,7 @@ class Pecorino::Adapters::MemoryAdapter
   # the current level (Float), whether the bucket is now at capacity (Boolean)
   # and whether the fillup was accepted (Boolean)
   def add_tokens_conditionally(key:, capacity:, leak_rate:, n_tokens:)
-    add_tokens_with_lock(key, capacity, leak_rate, n_tokens, _conditionally  = true)
+    add_tokens_with_lock(key, capacity, leak_rate, n_tokens, _conditionally = true)
   end
 
   # Sets a timed block for the given key - this is used when a throttle fires. The return value
