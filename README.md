@@ -103,6 +103,58 @@ end
 
 This way, every time there is an error on the "fancy AI service" the throttle will be triggered, and if it overflows - a subsequent request will be blocked.
 
+## A note on database transactions
+
+Pecorino uses your main database. When calling the `Throttle` or `LeakyBucket` objects, SQL queries will be performed by Pecorino and those queries may result in changes to data. If you are currently inside a database transaction, your bucket topups or set blocks may get reverted. For example, imagine you have a controller like this:
+
+```ruby
+class WalletController < ApplicationController
+  rescue_from Pecorino::Throttle::Throttled do |e|
+    response.set_header('Retry-After', e.retry_after.to_s)
+    render nothing: true, status: 429
+  end
+
+  def withdraw
+     Wallet.transaction do
+       t = Pecorino::Throttle.new("wallet_#{current_user.id}_max_withdrawal", capacity: 200_00, over_time: 5.minutes)
+       t.request!(10_00)
+       current_user.wallet.withdraw(Money.new(10, "EUR"))
+     end
+  end
+end
+```
+
+what will happen is that even though the `withdraw()` call is not going to be performed, the increment of the throttle will not either, because the exception will result in a `ROLLBACK`.
+
+If you need to use Pecorino in combination with transactions, you will need to design with that in mind. Either call `Throttle` before entering the `transaction do`:
+
+```ruby
+def withdraw
+  t = Pecorino::Throttle.new("wallet_#{current_user.id}_max_withdrawal", capacity: 200_00, over_time: 5.minutes)
+  t.request!(10_00)
+  Wallet.transaction do
+    current_user.wallet.withdraw(Money.new(10, "EUR"))
+  end
+end
+```
+
+or use the `request()` method instead to still commit:
+
+```ruby
+def withdraw
+  Wallet.transaction do
+    t = Pecorino::Throttle.new("wallet_#{current_user.id}_max_withdrawal", capacity: 200_00, over_time: 5.minutes)
+    throttle_state = t.request(10_00)
+    return render(nothing: true, status: 429) if throttle_state.blocked?
+
+    current_user.wallet.withdraw(Money.new(10, "EUR"))
+  end
+end
+```
+
+Note also that this behaviour might be desirable for your use case (that the throttle and the data update together in
+a transactional manner) – it just helps to be aware of it.
+
 ## Using just the leaky bucket
 
 Sometimes you don't want to use a throttle, but you want to track the amount added to the leaky bucket over time. A lower-level abstraction is available for that purpose in the form of the `LeakyBucket` class. It will not raise any exceptions and will not install blocks, but will permit you to track a bucket's state over time:
