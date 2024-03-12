@@ -13,6 +13,8 @@ class Pecorino::Block
   def self.set!(key:, block_for:, adapter: Pecorino.adapter)
     adapter.set_block(key: key, block_for: block_for)
     Time.now + block_for
+  rescue ArgumentError # negative block
+    nil
   end
 
   # Returns the time until a certain block is in effect
