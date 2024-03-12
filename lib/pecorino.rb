@@ -4,14 +4,15 @@ require "active_support/concern"
 require "active_record/sanitization"
 
 require_relative "pecorino/version"
-require_relative "pecorino/leaky_bucket"
-require_relative "pecorino/throttle"
 require_relative "pecorino/railtie" if defined?(Rails::Railtie)
-require_relative "pecorino/cached_throttle"
 
 module Pecorino
   autoload :Postgres, "pecorino/postgres"
   autoload :Sqlite, "pecorino/sqlite"
+  autoload :LeakyBucket, "pecorino/leaky_bucket"
+  autoload :Block, "pecorino/block"
+  autoload :Throttle, "pecorino/throttle"
+  autoload :CachedThrottle, "pecorino/cached_throttle"
 
   # Deletes stale leaky buckets and blocks which have expired. Run this method regularly to
   # avoid accumulating too many unused rows in your tables.

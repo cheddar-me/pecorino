@@ -156,7 +156,7 @@ class Pecorino::Throttle
   #
   # @return [State] the state of the throttle after filling up the leaky bucket / trying to pass the block
   def request(n = 1)
-    existing_blocked_until = Pecorino.adapter.blocked_until(key: @key)
+    existing_blocked_until = Pecorino::Block.blocked_until(key: @key)
     return State.new(existing_blocked_until.utc) if existing_blocked_until
 
     # Topup the leaky bucket, and if the topup gets rejected - block the caller
@@ -165,7 +165,7 @@ class Pecorino::Throttle
       State.new(nil)
     else
       # and set the block if the fillup was rejected
-      fresh_blocked_until = Pecorino.adapter.set_block(key: @key, block_for: @block_for)
+      fresh_blocked_until = Pecorino::Block.set!(key: @key, block_for: @block_for)
       State.new(fresh_blocked_until.utc)
     end
   end
