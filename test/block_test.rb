@@ -3,14 +3,6 @@
 require "test_helper"
 
 class BlockTest < ActiveSupport::TestCase
-  def setup
-    create_postgres_database
-  end
-
-  def teardown
-    drop_postgres_database
-  end
-
   test "sets a block" do
     k = Base64.strict_encode64(Random.bytes(4))
     assert_nil Pecorino::Block.blocked_until(key: k)
