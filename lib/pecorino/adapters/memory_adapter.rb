@@ -94,15 +94,16 @@ class Pecorino::Adapters::MemoryAdapter
   def prune
     now_monotonic = get_mono_time
 
-    @blocks.delete_if do |key, blocked_until_monotonic|
+    @blocks.keys.each do |key|
       @lock.with(key) do
-        blocked_until_monotonic < now_monotonic
+        @blocks.delete(key) if @blocks[key] && @blocks[key] < now_monotonic
       end
     end
 
-    @buckets.delete_if do |key, (_level, expire_at_monotonic)|
+    @buckets.keys.each do |key|
       @lock.with(key) do
-        expire_at_monotonic < now_monotonic
+        _level, expire_at_monotonic = @buckets[key]
+        @buckets.delete(key) if expire_at_monotonic && expire_at_monotonic < now_monotonic
       end
     end
   end
