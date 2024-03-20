@@ -228,10 +228,11 @@ module AdapterTestMethods
     adapter.add_tokens_conditionally(key: key, capacity: capacity, leak_rate: leak_rate, n_tokens: 29.6)
     adapter.set_block(key: key, block_for: 0.5)
 
-    sleep 0.65
+    sleep 2
 
     # Both the leaky bucket and the block should have expired by now, and `prune` should not raise
-    adapter.prune
+    assert_nothing_raised { adapter.prune }
+    assert_nil adapter.blocked_until(key: key)
   end
 
   def test_create_tables
