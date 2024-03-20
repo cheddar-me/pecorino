@@ -2,37 +2,11 @@ name: CI
 
 on:
   - push
-  - pull_request
 
 env:
   BUNDLE_PATH: vendor/bundle
 
 jobs:
-  # lint:
-  #   name: Code Style
-  #   runs-on: ubuntu-22.04
-  #   if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-  #   strategy:
-  #     matrix:
-  #       ruby:
-  #         - '2.7'
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
-  #     - name: Setup Ruby
-  #       uses: ruby/setup-ruby@v1
-  #       with:
-  #         ruby-version: ${{ matrix.ruby }}
-  #         bundler-cache: true
-  #     - name: Rubocop Cache
-  #       uses: actions/cache@v3
-  #       with:
-  #         path: ~/.cache/rubocop_cache
-  #         key: ${{ runner.os }}-rubocop-${{ hashFiles('.rubocop.yml') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-rubocop-
-  #     - name: Rubocop
-  #       run: bundle exec rubocop
   test:
     name: Tests
     runs-on: ubuntu-22.04
@@ -50,6 +24,11 @@ jobs:
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
         ports:
           - 5432:5432
+      redis:
+        image: redis
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+        ports:
+          - 6379:6379
     steps:
       - name: Checkout
         uses: actions/checkout@v4

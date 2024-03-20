@@ -1,3 +1,10 @@
+## 0.7.0
+
+- Allow `Pecorino.adapter` to be assigned, and add `adapter:` to all classes. This allows the adapter for Pecorino to be configured manually and overridden in an initializer.
+- Add Redis-based adapter derived from Prorate
+- Formalize and test the adapter API
+- Add a memory-based adapter for single-process applications (and as a reference)
+
 ## 0.6.0
 
 - Add `Pecorino::Block` for setting blocks directly. These are available both to `Throttle` with the same key and on their own. This can be used to set arbitrary blocks without having to configure a `Throttle` first.

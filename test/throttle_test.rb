@@ -2,17 +2,13 @@
 
 require "test_helper"
 
-class ThrottlePostgresTest < ActiveSupport::TestCase
-  def setup
-    create_postgres_database
-  end
-
-  def teardown
-    drop_postgres_database
+class ThrottleTest < ActiveSupport::TestCase
+  def memory_adapter
+    @adapter ||= Pecorino::Adapters::MemoryAdapter.new
   end
 
   test "request! installs a block and then removes it and communicates the block using exceptions" do
-    throttle = Pecorino::Throttle.new(key: Random.uuid, over_time: 1.0, capacity: 30)
+    throttle = Pecorino::Throttle.new(key: Random.uuid, over_time: 1.0, capacity: 30, adapter: memory_adapter)
 
     state_after_first_request = throttle.request!
     assert_kind_of Pecorino::Throttle::State, state_after_first_request
@@ -42,12 +38,12 @@ class ThrottlePostgresTest < ActiveSupport::TestCase
 
   test "allows the block_for parameter to be omitted" do
     assert_nothing_raised do
-      Pecorino::Throttle.new(key: Random.uuid, over_time: 1, capacity: 30)
+      Pecorino::Throttle.new(key: Random.uuid, over_time: 1, capacity: 30, adapter: memory_adapter)
     end
   end
 
   test "still throttles using request() without raising exceptions" do
-    throttle = Pecorino::Throttle.new(key: Random.uuid, leak_rate: 30, capacity: 30, block_for: 3)
+    throttle = Pecorino::Throttle.new(key: Random.uuid, leak_rate: 30, capacity: 30, block_for: 3, adapter: memory_adapter)
 
     20.times do
       state = throttle.request
@@ -76,7 +72,7 @@ class ThrottlePostgresTest < ActiveSupport::TestCase
   end
 
   test "able_to_accept? returns the prediction whether the throttle will accept" do
-    throttle = Pecorino::Throttle.new(key: Random.uuid, leak_rate: 30, capacity: 30, block_for: 2)
+    throttle = Pecorino::Throttle.new(key: Random.uuid, leak_rate: 30, capacity: 30, block_for: 2, adapter: memory_adapter)
 
     assert throttle.able_to_accept?
     assert throttle.able_to_accept?(29)
@@ -93,7 +89,7 @@ class ThrottlePostgresTest < ActiveSupport::TestCase
   end
 
   test "starts to throttle sooner with a higher fillup rate" do
-    throttle = Pecorino::Throttle.new(key: Random.uuid, leak_rate: 30, capacity: 30, block_for: 3)
+    throttle = Pecorino::Throttle.new(key: Random.uuid, leak_rate: 30, capacity: 30, block_for: 3, adapter: memory_adapter)
 
     15.times do
       throttle.request!(2)
@@ -108,7 +104,7 @@ class ThrottlePostgresTest < ActiveSupport::TestCase
   end
 
   test "throttled() calls the block just once" do
-    throttle = Pecorino::Throttle.new(key: Random.uuid, over_time: 1.minute, capacity: 1)
+    throttle = Pecorino::Throttle.new(key: Random.uuid, over_time: 60, capacity: 1, adapter: memory_adapter)
 
     counter = 0
 

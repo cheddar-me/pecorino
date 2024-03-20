@@ -90,12 +90,14 @@ class Pecorino::LeakyBucket
   #   the bucket contents will then be capped at this value. So with
   #   bucket_capacity set to 12 and a `fillup(14)` the bucket will reach the level
   #   of 12, and will then immediately start leaking again.
-  def initialize(key:, capacity:, leak_rate: nil, over_time: nil)
+  # @param adapter[Pecorino::Adapters::BaseAdapter] a compatible adapter
+  def initialize(key:, capacity:, adapter: Pecorino.adapter, leak_rate: nil, over_time: nil)
     raise ArgumentError, "Either leak_rate: or over_time: must be specified" if leak_rate.nil? && over_time.nil?
     raise ArgumentError, "Either leak_rate: or over_time: may be specified, but not both" if leak_rate && over_time
     @leak_rate = leak_rate || (capacity / over_time.to_f)
     @key = key
     @capacity = capacity.to_f
+    @adapter = adapter
   end
 
   # Places `n` tokens in the bucket. If the bucket has less capacity than `n` tokens, the bucket will be filled to capacity.
@@ -109,7 +111,7 @@ class Pecorino::LeakyBucket
   # @param n_tokens[Float] How many tokens to fillup by
   # @return [State] the state of the bucket after the operation
   def fillup(n_tokens)
-    capped_level_after_fillup, is_full = Pecorino.adapter.add_tokens(capacity: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
+    capped_level_after_fillup, is_full = @adapter.add_tokens(capacity: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
     State.new(capped_level_after_fillup, is_full)
   end
 
@@ -131,7 +133,7 @@ class Pecorino::LeakyBucket
   # @param n_tokens[Float] How many tokens to fillup by
   # @return [ConditionalFillupResult] the state of the bucket after the operation and whether the operation succeeded
   def fillup_conditionally(n_tokens)
-    capped_level_after_fillup, is_full, did_accept = Pecorino.adapter.add_tokens_conditionally(capacity: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
+    capped_level_after_fillup, is_full, did_accept = @adapter.add_tokens_conditionally(capacity: @capacity, key: @key, leak_rate: @leak_rate, n_tokens: n_tokens)
     ConditionalFillupResult.new(capped_level_after_fillup, is_full, did_accept)
   end
 
@@ -140,7 +142,7 @@ class Pecorino::LeakyBucket
   #
   # @return [State] the snapshotted state of the bucket at time of query
   def state
-    current_level, is_full = Pecorino.adapter.state(key: @key, capacity: @capacity, leak_rate: @leak_rate)
+    current_level, is_full = @adapter.state(key: @key, capacity: @capacity, leak_rate: @leak_rate)
     State.new(current_level, is_full)
   end
 
