@@ -41,10 +41,19 @@ module Pecorino
     adapter.create_tables(active_record_schema)
   end
 
+  # Allows assignment of an adapter for storing throttles. Normally this would be a subclass of `Pecorino::Adapters::BaseAdapter`, but
+  # you can assign anything you like. Set this in an initializer. By default Pecorino will use the adapter configured from your main
+  # database, but you can also create a separate database for it - or use Redis or memory storage.
+  #
+  # @param adapter[Pecorino::Adapters::BaseAdapter]
+  # @return [Pecorino::Adapters::BaseAdapter]
   def self.adapter=(adapter)
     @adapter = adapter
   end
 
+  # Returns the currently configured adapter, or the default adapter from the main database
+  #
+  # @return [Pecorino::Adapters::BaseAdapter]
   def self.adapter
     @adapter || default_adapter_from_main_database
   end
@@ -52,7 +61,9 @@ module Pecorino
   # Returns the database implementation for setting the values atomically. Since the implementation
   # differs per database, this method will return a different adapter depending on which database is
   # being used
-  def self.default_adapter_from_main_database # default_adapter_from_main_database
+  #
+  # @param adapter[Pecorino::Adapters::BaseAdapter]
+  def self.default_adapter_from_main_database
     model_class = ActiveRecord::Base
     adapter_name = model_class.connection.adapter_name
     case adapter_name
@@ -61,7 +72,7 @@ module Pecorino
     when /sqlite/i
       Pecorino::Adapters::SqliteAdapter.new(model_class)
     else
-      raise "Pecorino does not support #{adapter_name} just yet"
+      raise "Pecorino does not support the #{adapter_name} database just yet"
     end
   end
 end
