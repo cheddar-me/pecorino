@@ -99,10 +99,13 @@ class Pecorino::Throttle
   # @param key[String] the key for both the block record and the leaky bucket
   # @param block_for[Numeric] the number of seconds to block any further requests for. Defaults to time it takes
   #   the bucket to leak out to the level of 0
+  # @param adapter[Pecorino::Adapters::BaseAdapter] a compatible adapter
   # @param leaky_bucket_options Options for `Pecorino::LeakyBucket.new`
   # @see PecorinoLeakyBucket.new
-  def initialize(key:, block_for: nil, **leaky_bucket_options)
-    @bucket = Pecorino::LeakyBucket.new(key: key, **leaky_bucket_options)
+  def initialize(key:, block_for: nil, adapter: Pecorino.adapter, **leaky_bucket_options)
+    @adapter = adapter
+    leaky_bucket_options.delete(:adapter)
+    @bucket = Pecorino::LeakyBucket.new(key: key, adapter: @adapter, **leaky_bucket_options)
     @key = key.to_s
     @block_for = block_for ? block_for.to_f : (@bucket.capacity / @bucket.leak_rate)
   end
@@ -116,7 +119,7 @@ class Pecorino::Throttle
   # @param n_tokens[Float]
   # @return [boolean]
   def able_to_accept?(n_tokens = 1)
-    Pecorino.adapter.blocked_until(key: @key).nil? && @bucket.able_to_accept?(n_tokens)
+    @adapter.blocked_until(key: @key).nil? && @bucket.able_to_accept?(n_tokens)
   end
 
   # Register that a request is being performed. Will raise Throttled
@@ -156,7 +159,7 @@ class Pecorino::Throttle
   #
   # @return [State] the state of the throttle after filling up the leaky bucket / trying to pass the block
   def request(n = 1)
-    existing_blocked_until = Pecorino::Block.blocked_until(key: @key)
+    existing_blocked_until = Pecorino::Block.blocked_until(key: @key, adapter: @adapter)
     return State.new(existing_blocked_until.utc) if existing_blocked_until
 
     # Topup the leaky bucket, and if the topup gets rejected - block the caller
@@ -165,7 +168,7 @@ class Pecorino::Throttle
       State.new(nil)
     else
       # and set the block if the fillup was rejected
-      fresh_blocked_until = Pecorino::Block.set!(key: @key, block_for: @block_for)
+      fresh_blocked_until = Pecorino::Block.set!(key: @key, block_for: @block_for, adapter: @adapter)
       State.new(fresh_blocked_until.utc)
     end
   end

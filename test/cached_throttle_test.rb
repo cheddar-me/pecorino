@@ -3,17 +3,13 @@
 require "test_helper"
 
 class CachedThrottleTest < ActiveSupport::TestCase
-  def setup
-    create_postgres_database
-  end
-
-  def teardown
-    drop_postgres_database
+  def adapter
+    @adapter ||= Pecorino::Adapters::MemoryAdapter.new
   end
 
   test "caches results of request! and correctly raises Throttled until the block is lifted" do
     store = ActiveSupport::Cache::MemoryStore.new
-    throttle = Pecorino::Throttle.new(key: Random.uuid, capacity: 2, over_time: 1.second, block_for: 10.seconds)
+    throttle = Pecorino::Throttle.new(key: Random.uuid, capacity: 2, over_time: 1, block_for: 10, adapter: adapter)
     cached_throttle = Pecorino::CachedThrottle.new(store, throttle)
 
     state1 = cached_throttle.request!
@@ -38,7 +34,7 @@ class CachedThrottleTest < ActiveSupport::TestCase
 
   test "caches results of able_to_accept? until the block is lifted" do
     store = ActiveSupport::Cache::MemoryStore.new
-    throttle = Pecorino::Throttle.new(key: Random.uuid, capacity: 2, over_time: 1.second, block_for: 10.seconds)
+    throttle = Pecorino::Throttle.new(key: Random.uuid, capacity: 2, over_time: 1, block_for: 10, adapter: adapter)
     cached_throttle = Pecorino::CachedThrottle.new(store, throttle)
 
     cached_throttle.request(1)
@@ -57,7 +53,7 @@ class CachedThrottleTest < ActiveSupport::TestCase
 
   test "caches results of request() and correctly returns cached state until the block is lifted" do
     store = ActiveSupport::Cache::MemoryStore.new
-    throttle = Pecorino::Throttle.new(key: Random.uuid, capacity: 2, over_time: 1.second, block_for: 10.seconds)
+    throttle = Pecorino::Throttle.new(key: Random.uuid, capacity: 2, over_time: 1, block_for: 10, adapter: adapter)
     cached_throttle = Pecorino::CachedThrottle.new(store, throttle)
 
     state1 = cached_throttle.request(1)
@@ -80,14 +76,14 @@ class CachedThrottleTest < ActiveSupport::TestCase
 
   test "returns the key of the contained throttle" do
     store = ActiveSupport::Cache::MemoryStore.new
-    throttle = Pecorino::Throttle.new(key: Random.uuid, capacity: 2, over_time: 1.second, block_for: 10.seconds)
+    throttle = Pecorino::Throttle.new(key: Random.uuid, capacity: 2, over_time: 1, block_for: 10, adapter: adapter)
     cached_throttle = Pecorino::CachedThrottle.new(store, throttle)
     assert_equal cached_throttle.key, throttle.key
   end
 
   test "does not run block in throttled() until the block is lifted" do
     store = ActiveSupport::Cache::MemoryStore.new
-    throttle = Pecorino::Throttle.new(key: Random.uuid, capacity: 2, over_time: 1.second, block_for: 10.seconds)
+    throttle = Pecorino::Throttle.new(key: Random.uuid, capacity: 2, over_time: 1, block_for: 10, adapter: adapter)
     cached_throttle = Pecorino::CachedThrottle.new(store, throttle)
 
     assert_equal 123, cached_throttle.throttled { 123 }
