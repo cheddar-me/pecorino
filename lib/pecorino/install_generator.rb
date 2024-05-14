@@ -5,8 +5,8 @@ require "rails/generators/active_record"
 
 module Pecorino
   #
-  # Rails generator used for setting up GoodJob in a Rails application.
-  # Run it with +bin/rails g good_job:install+ in your console.
+  # Rails generator used for setting up Pecorino in a Rails application.
+  # Run it with +bin/rails g pecorino:install+ in your console.
   #
   class InstallGenerator < Rails::Generators::Base
     include ActiveRecord::Generators::Migration
