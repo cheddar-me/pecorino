@@ -203,7 +203,7 @@ class Pecorino::Adapters::SqliteAdapter
   end
 
   def create_tables(active_record_schema)
-    active_record_schema.create_table :pecorino_leaky_buckets, id: :uuid do |t|
+    active_record_schema.create_table :pecorino_leaky_buckets do |t|
       t.string :key, null: false
       t.float :level, null: false
       t.datetime :last_touched_at, null: false
@@ -212,7 +212,7 @@ class Pecorino::Adapters::SqliteAdapter
     active_record_schema.add_index :pecorino_leaky_buckets, [:key], unique: true
     active_record_schema.add_index :pecorino_leaky_buckets, [:may_be_deleted_after]
 
-    active_record_schema.create_table :pecorino_blocks, id: :uuid do |t|
+    active_record_schema.create_table :pecorino_blocks do |t|
       t.string :key, null: false
       t.datetime :blocked_until, null: false
     end
