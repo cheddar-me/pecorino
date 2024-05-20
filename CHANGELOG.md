@@ -4,6 +4,7 @@
 - Add Redis-based adapter derived from Prorate
 - Formalize and test the adapter API
 - Add a memory-based adapter for single-process applications (and as a reference)
+- For SQLite tables, do not use UUID primary keys - there is no need for that, and SQLite does not have a antive UUID gen functin that is enabled on all builds
 
 ## 0.6.0
 

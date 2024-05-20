@@ -54,16 +54,14 @@ class Pecorino::Adapters::SqliteAdapter
       delete_after_s: may_be_deleted_after_seconds,
       leak_rate: leak_rate.to_f,
       now_s: Time.now.to_f, # See above as to why we are using a time value passed in
-      fillup: n_tokens.to_f,
-      id: SecureRandom.uuid # SQLite3 does not autogenerate UUIDs
+      fillup: n_tokens.to_f
     }
 
     sql = @model_class.sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_leaky_buckets AS t
-        (id, key, last_touched_at, may_be_deleted_after, level)
+        (key, last_touched_at, may_be_deleted_after, level)
       VALUES
         (
-          :id,
           :key,
           :now_s, -- Precision loss must be avoided here as it is used for calculations
           DATETIME('now', '+:delete_after_s seconds'), -- Precision loss is acceptable here
@@ -111,8 +109,7 @@ class Pecorino::Adapters::SqliteAdapter
       delete_after_s: may_be_deleted_after_seconds,
       leak_rate: leak_rate.to_f,
       now_s: Time.now.to_f, # See above as to why we are using a time value passed in
-      fillup: n_tokens.to_f,
-      id: SecureRandom.uuid # SQLite3 does not autogenerate UUIDs
+      fillup: n_tokens.to_f
     }
 
     # Sadly with SQLite we need to do an INSERT first, because otherwise the inserted row is visible
@@ -120,10 +117,9 @@ class Pecorino::Adapters::SqliteAdapter
     # This shuld be fine however since we will suppress the INSERT on a key conflict
     insert_sql = @model_class.sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_leaky_buckets AS t
-        (id, key, last_touched_at, may_be_deleted_after, level)
+        (key, last_touched_at, may_be_deleted_after, level)
       VALUES
         (
-          :id,
           :key,
           :now_s, -- Precision loss must be avoided here as it is used for calculations
           DATETIME('now', '+:delete_after_s seconds'), -- Precision loss is acceptable here
@@ -168,12 +164,12 @@ class Pecorino::Adapters::SqliteAdapter
 
   def set_block(key:, block_for:)
     raise ArgumentError, "block_for must be positive" unless block_for > 0
-    query_params = {id: SecureRandom.uuid, key: key.to_s, block_for: block_for.to_f, now_s: Time.now.to_f}
+    query_params = {key: key.to_s, block_for: block_for.to_f, now_s: Time.now.to_f}
     block_set_query = @model_class.sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_blocks AS t
-        (id, key, blocked_until)
+        (key, blocked_until)
       VALUES
-        (:id, :key, :now_s + :block_for)
+        (:key, :now_s + :block_for)
       ON CONFLICT (key) DO UPDATE SET
         blocked_until = MAX(EXCLUDED.blocked_until, t.blocked_until)
       RETURNING blocked_until;
