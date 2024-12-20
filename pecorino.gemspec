@@ -30,10 +30,10 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # Uncomment to register a new dependency of your gem
-  spec.add_dependency "activerecord", "~> 7"
+  spec.add_dependency "activerecord", "~> 8"
   spec.add_development_dependency "pg"
   spec.add_development_dependency "sqlite3"
-  spec.add_development_dependency "activesupport", "~> 7.0"
+  spec.add_development_dependency "activesupport", "~> 8"
   spec.add_development_dependency "rake", "~> 13.0"
   spec.add_development_dependency "minitest", "~> 5.0"
   spec.add_development_dependency "standard"
