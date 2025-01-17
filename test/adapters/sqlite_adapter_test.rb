@@ -9,7 +9,7 @@ class SqliteAdapterTest < ActiveSupport::TestCase
 
   def create_sqlite_db
     ActiveRecord::Migration.verbose = false
-    ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: test_db_filename)
+    ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: db_filename)
 
     ActiveRecord::Schema.define(version: 1) do |via_definer|
       Pecorino.create_tables(via_definer)
@@ -18,12 +18,12 @@ class SqliteAdapterTest < ActiveSupport::TestCase
 
   def drop_sqlite_db
     ActiveRecord::Base.connection.close
-    FileUtils.rm_rf(test_db_filename)
-    FileUtils.rm_rf(test_db_filename + "-wal")
-    FileUtils.rm_rf(test_db_filename + "-shm")
+    FileUtils.rm_rf(db_filename)
+    FileUtils.rm_rf(db_filename + "-wal")
+    FileUtils.rm_rf(db_filename + "-shm")
   end
 
-  def test_db_filename
+  def db_filename
     "pecorino_tests_%s.sqlite3" % Random.new(Minitest.seed).hex(4)
   end
 
@@ -41,5 +41,6 @@ class SqliteAdapterTest < ActiveSupport::TestCase
         retained_adapter.create_tables(via_definer)
       end
     end
+    assert true
   end
 end

@@ -50,6 +50,7 @@ class PostgresAdapterTest < ActiveSupport::TestCase
         retained_adapter.create_tables(via_definer)
       end
     end
+    assert true
   end
 
   Minitest.after_run do
