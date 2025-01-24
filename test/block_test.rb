@@ -1,6 +1,6 @@
 # frozen_string_literal: true
-
 require "test_helper"
+require "base64"
 
 class BlockTest < ActiveSupport::TestCase
   test "sets a block" do
