@@ -7,7 +7,7 @@ class RedisAdapterTest < ActiveSupport::TestCase
   teardown { delete_created_keys }
 
   def create_adapter
-    Pecorino::Adapters::RedisAdapter.new(Redis.new, key_prefix: key_prefix)
+    Pecorino::Adapters::RedisAdapter.new(new_redis, key_prefix: key_prefix)
   end
 
   def key_prefix
@@ -15,8 +15,12 @@ class RedisAdapterTest < ActiveSupport::TestCase
   end
 
   def delete_created_keys
-    r = Redis.new
+    r = new_redis
     r.del(r.keys(key_prefix + "*"))
+  end
+
+  def new_redis
+    Redis.new
   end
 
   undef :test_create_tables

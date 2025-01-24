@@ -7,6 +7,14 @@ class PostgresAdapterTest < ActiveSupport::TestCase
   setup { create_postgres_database_if_none }
   teardown { truncate_test_tables }
 
+  def self.establish_connection(**options)
+    ActiveRecord::Base.establish_connection(
+      adapter: "postgresql",
+      connect_timeout: 2,
+      **options
+    )
+  end
+
   def create_adapter
     Pecorino::Adapters::PostgresAdapter.new(ActiveRecord::Base)
   end
@@ -14,7 +22,7 @@ class PostgresAdapterTest < ActiveSupport::TestCase
   SEED_DB_NAME = -> { "pecorino_tests_%s" % Random.new(Minitest.seed).hex(4) }
 
   def create_postgres_database_if_none
-    ActiveRecord::Base.establish_connection(adapter: "postgresql", encoding: "unicode", database: SEED_DB_NAME.call)
+    self.class.establish_connection(encoding: "unicode", database: SEED_DB_NAME.call)
     ActiveRecord::Base.connection.execute("SELECT 1 FROM pecorino_leaky_buckets")
   rescue ActiveRecord::NoDatabaseError, ActiveRecord::ConnectionNotEstablished
     create_postgres_database
@@ -29,10 +37,10 @@ class PostgresAdapterTest < ActiveSupport::TestCase
 
   def create_postgres_database
     ActiveRecord::Migration.verbose = false
-    ActiveRecord::Base.establish_connection(adapter: "postgresql", database: "postgres")
+    self.class.establish_connection(database: "postgres")
     ActiveRecord::Base.connection.create_database(SEED_DB_NAME.call, charset: :unicode)
     ActiveRecord::Base.connection.close
-    ActiveRecord::Base.establish_connection(adapter: "postgresql", encoding: "unicode", database: SEED_DB_NAME.call)
+    self.class.establish_connection(encoding: "unicode", database: SEED_DB_NAME.call)
   end
 
   def truncate_test_tables
@@ -50,11 +58,12 @@ class PostgresAdapterTest < ActiveSupport::TestCase
         retained_adapter.create_tables(via_definer)
       end
     end
+    assert true
   end
 
   Minitest.after_run do
     ActiveRecord::Base.connection.close
-    ActiveRecord::Base.establish_connection(adapter: "postgresql", database: "postgres")
+    establish_connection(database: "postgres")
     ActiveRecord::Base.connection.drop_database(SEED_DB_NAME.call)
   end
 end
