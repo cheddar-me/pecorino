@@ -95,6 +95,7 @@ GEM
     marcel (1.0.2)
     method_source (1.1.0)
     mini_mime (1.1.2)
+    mini_portile2 (2.8.8)
     minitest (5.25.5)
     minitest-fail-fast (0.1.0)
       minitest (~> 5)
@@ -108,7 +109,8 @@ GEM
     net-smtp (0.3.3)
       net-protocol
     nio4r (2.5.8)
-    nokogiri (1.15.6-arm64-darwin)
+    nokogiri (1.15.6)
+      mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
     parallel (1.26.3)
     parser (3.3.7.1)
@@ -179,7 +181,7 @@ GEM
       actionpack (>= 5.2)
       activesupport (>= 5.2)
       sprockets (>= 3.0.0)
-    sqlite3 (2.6.0-arm64-darwin)
+    sqlite3 (1.5.4-arm64-darwin)
     standard (1.37.0)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.0)
@@ -216,7 +218,7 @@ DEPENDENCIES
   rails (>= 6.0, < 7.0)
   rake
   redis (~> 5, < 6)
-  sqlite3
+  sqlite3 (< 1.6)
   standard
 
 BUNDLED WITH
