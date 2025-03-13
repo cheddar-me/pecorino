@@ -2,7 +2,7 @@
 
 module Pecorino::Adapters::ConnectionShim
   def with_connection
-    raise "No @model_class in #{self.inspect} - unable to obtain connection" unless @model_class
+    raise "No @model_class in #{inspect} - unable to obtain connection" unless @model_class
     @model_class.connection.pool.with_connection do |conn|
       conn.uncached do
         yield(conn)
