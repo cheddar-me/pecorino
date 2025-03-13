@@ -2,6 +2,7 @@ appraise "rails-6" do
   gem "rails", ">= 6.0", "< 7.0"
   gem "pg"
   gem "sqlite3", "< 1.6"
+  gem "logger"
 end
 
 appraise "rails-8" do
