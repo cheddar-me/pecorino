@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The module contains the conformance tests for a storage adapter for Pecorino. A well-behaved adapter
 # should pass all of these tests. When creating a new adapter include this module in your test case
 # and overload the `create_adapter` method
