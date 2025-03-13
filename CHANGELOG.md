@@ -1,3 +1,8 @@
+## 0.8.0
+
+- Make the way we work with AR connections a bit cleaner by abstracting it into a shim. Pecorino does not _require_ ActiveRecord to function, so we might as well remove it as a dependency completely later on.
+- Pin the minimum Ruby to 2.7.7
+
 ## 0.7.1
 
 - Release dependency constraint to permit Rails 8 (not thoroughly validated yet)
