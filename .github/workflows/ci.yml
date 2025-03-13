@@ -1,21 +1,40 @@
 name: CI
 
 on:
-  - push
+  pull_request:
+  push:
+    branches: [ main ]
 
 env:
+  PGHOST: localhost
+  PGUSER: postgres
+  PGPASSWORD: postgres
+  TESTOPTS: "--fail-fast"
   BUNDLE_PATH: vendor/bundle
 
 jobs:
-  test:
-    name: Tests
-    runs-on: ubuntu-22.04
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    strategy:
-      matrix:
-        ruby:
-          - '2.7'
-          - '3.2'
+  lint:
+    name: "Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Note: Appraisals for Rails 6 and Rails 8 differ in minimum Ruby version
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7.7
+          bundler-cache: true
+
+      - name: Lint code for consistent style
+        run: bundle exec standardrb
+
+  test_rails6:
+    name: "Tests (Rails 6)"
+    runs-on: ubuntu-latest
+    env:
+      BUNDLE_GEMFILE: ${{ github.workspace }}/gemfiles/rails_6.gemfile
     services:
       postgres:
         image: postgres
@@ -30,19 +49,51 @@ jobs:
         ports:
           - 6379:6379
     steps:
-      - name: Checkout
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y curl libjemalloc2 sqlite3
+
+      - name: Checkout code
         uses: actions/checkout@v4
-      - name: Setup Ruby
+
+      - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ${{ matrix.ruby }}
+          ruby-version: 2.7.7
           bundler-cache: true
-      - name: "Tests and Lint"
-        run: bundle exec rake
+
+      - name: Run tests
+        run: bundle exec rake test
+
+  test_rails_8:
+    name: "Tests (Rails 8)"
+    runs-on: ubuntu-latest
+    env:
+      BUNDLE_GEMFILE: ${{ github.workspace }}/gemfiles/rails_8.gemfile
+    services:
+      postgres:
+        image: postgres
         env:
-          PGHOST: localhost
-          PGUSER: postgres
-          PGPASSWORD: postgres
-          TESTOPTS: "--fail-fast"
-        #   MYSQL_HOST: 127.0.0.1
-        #   MYSQL_PORT: 3306
+          POSTGRES_PASSWORD: postgres
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+        ports:
+          - 6379:6379
+    steps:
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y curl libjemalloc2 sqlite3
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2.2
+          bundler-cache: true
+
+      - name: Run tests
+        run: bundle exec rake test
