@@ -14,7 +14,7 @@ class BlockTest < ActiveSupport::TestCase
     assert Pecorino::Block.set!(key: k, block_for: 30 * 60)
 
     blocked_until = Pecorino::Block.blocked_until(key: k)
-    assert_in_delta Time.now + 30.minutes, blocked_until, 10
+    assert_in_delta Time.now + (30 * 60), blocked_until, 10
   end
 
   test "does not return a block which has lapsed" do
