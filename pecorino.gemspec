@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.description = "Pecorino allows you to define throttles and rate meters for your metered resources, all through your standard DB"
   spec.homepage = "https://github.com/cheddar-me/pecorino"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 2.4.0"
+  spec.required_ruby_version = ">= 2.7.7"
 
   # spec.metadata["allowed_push_host"] = "TODO: Set to 'https://mygemserver.com'"
 
@@ -30,12 +30,15 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # Uncomment to register a new dependency of your gem
-  spec.add_dependency "activerecord", ">= 7"
+  spec.add_dependency "activerecord", ">= 6"
   spec.add_development_dependency "pg"
-  spec.add_development_dependency "sqlite3"
-  spec.add_development_dependency "activesupport", ">= 7"
-  spec.add_development_dependency "rake", "~> 13.0"
-  spec.add_development_dependency "minitest", "~> 5.0"
+  # Use SQLite for the _old_ Ruby version, since newer versions do not have appropriate
+  # platform-specific binary gems at the ready. For Ruby 3, you would otherwise need
+  # ">= 2". But it's zero effort for us to stay compatible, so why not?
+  spec.add_development_dependency "sqlite3", ">= 1.5.0", "< 1.6.0"
+  spec.add_development_dependency "activesupport"
+  spec.add_development_dependency "rake"
+  spec.add_development_dependency "minitest"
   spec.add_development_dependency "standard"
   spec.add_development_dependency "magic_frozen_string_literal"
   spec.add_development_dependency "minitest-fail-fast"
