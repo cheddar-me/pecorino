@@ -132,7 +132,7 @@ class Pecorino::Adapters::SqliteAdapter
       -- so that it can't be deleted between our INSERT and our UPDATE
         may_be_deleted_after = EXCLUDED.may_be_deleted_after
     SQL
-    with_connection {|c| c.execute(insert_sql) }
+    with_connection { |c| c.execute(insert_sql) }
 
     sql = sanitize_sql_array([<<~SQL, query_params])
       -- With SQLite MATERIALIZED has to be used so that level_post is calculated before the UPDATE takes effect
@@ -158,7 +158,7 @@ class Pecorino::Adapters::SqliteAdapter
         level AS level_after
     SQL
 
-    upserted = with_connection {|c| c.select_one(sql) }
+    upserted = with_connection { |c| c.select_one(sql) }
     level_after = upserted.fetch("level_after")
     level_before = upserted.fetch("level_before")
     [level_after, level_after >= capacity, level_after != level_before]

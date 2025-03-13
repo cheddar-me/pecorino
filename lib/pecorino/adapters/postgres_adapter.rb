@@ -143,7 +143,7 @@ class Pecorino::Adapters::PostgresAdapter
         level AS level_after
     SQL
 
-    upserted = with_connection {|c|c.select_one(sql) }
+    upserted = with_connection { |c| c.select_one(sql) }
     level_after = upserted.fetch("level_after")
     level_before = upserted.fetch("level_before")
     [level_after, level_after >= capacity, level_after != level_before]
@@ -161,7 +161,7 @@ class Pecorino::Adapters::PostgresAdapter
         blocked_until = GREATEST(EXCLUDED.blocked_until, t.blocked_until)
       RETURNING blocked_until
     SQL
-    with_connection {|c| c.select_value(block_set_query) }
+    with_connection { |c| c.select_value(block_set_query) }
   end
 
   def blocked_until(key:)

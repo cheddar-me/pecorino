@@ -5,7 +5,7 @@ require "base64"
 
 class BlockTest < ActiveSupport::TestCase
   def setup
-    Pecorino.adapter = Pecorino::MemoryAdapter.new
+    Pecorino.adapter = Pecorino::Adapters::MemoryAdapter.new
   end
 
   test "sets a block" do
