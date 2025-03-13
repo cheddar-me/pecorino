@@ -1,3 +1,7 @@
+## 0.7.1
+
+- Release dependency constraint to permit Rails 8 (not thoroughly validated yet)
+
 ## 0.7.0
 
 - Allow `Pecorino.adapter` to be assigned, and add `adapter:` to all classes. This allows the adapter for Pecorino to be configured manually and overridden in an initializer.
