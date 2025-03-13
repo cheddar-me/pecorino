@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Pecorino::Adapters::PostgresAdapter
+  include Pecorino::Adapters::ConnectionShim
+
   def initialize(model_class)
     @model_class = model_class
   end
@@ -30,7 +32,7 @@ class Pecorino::Adapters::PostgresAdapter
 
     # If the return value of the query is a NULL it means no such bucket exists,
     # so we assume the bucket is empty
-    current_level = @model_class.connection.uncached { @model_class.connection.select_value(sql) } || 0.0
+    current_level = with_connection { |c| c.select_value(sql) } || 0.0
     [current_level, capacity - current_level.abs < 0.01]
   end
 
@@ -83,7 +85,7 @@ class Pecorino::Adapters::PostgresAdapter
     # query as a repeat (since we use "select_one" for the RETURNING bit) and will not call into Postgres
     # correctly, thus the clock_timestamp() value would be frozen between calls. We don't want that here.
     # See https://stackoverflow.com/questions/73184531/why-would-postgres-clock-timestamp-freeze-inside-a-rails-unit-test
-    upserted = @model_class.connection.uncached { @model_class.connection.select_one(sql) }
+    upserted = with_connection { |c| c.select_one(sql) }
     capped_level_after_fillup, at_capacity = upserted.fetch("level"), upserted.fetch("at_capacity")
     [capped_level_after_fillup, at_capacity]
   end
@@ -166,12 +168,14 @@ class Pecorino::Adapters::PostgresAdapter
     block_check_query = @model_class.sanitize_sql_array([<<~SQL, key])
       SELECT blocked_until FROM pecorino_blocks WHERE key = ? AND blocked_until >= clock_timestamp() LIMIT 1
     SQL
-    @model_class.connection.uncached { @model_class.connection.select_value(block_check_query) }
+    with_connection { |c| c.select_value(block_check_query) }
   end
 
   def prune
-    @model_class.connection.execute("DELETE FROM pecorino_blocks WHERE blocked_until < NOW()")
-    @model_class.connection.execute("DELETE FROM pecorino_leaky_buckets WHERE may_be_deleted_after < NOW()")
+    with_connection do |c|
+      c.execute("DELETE FROM pecorino_blocks WHERE blocked_until < NOW()")
+      c.execute("DELETE FROM pecorino_leaky_buckets WHERE may_be_deleted_after < NOW()")
+    end
   end
 
   def create_tables(active_record_schema)

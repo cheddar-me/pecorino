@@ -13,6 +13,7 @@ module Pecorino
   autoload :CachedThrottle, "pecorino/cached_throttle"
 
   module Adapters
+    autoload :ConnectionShim, "pecorino/adapters/connection_shim"
     autoload :MemoryAdapter, "pecorino/adapters/memory_adapter"
     autoload :PostgresAdapter, "pecorino/adapters/postgres_adapter"
     autoload :SqliteAdapter, "pecorino/adapters/sqlite_adapter"
