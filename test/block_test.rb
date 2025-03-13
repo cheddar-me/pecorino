@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 require "base64"
 
 class BlockTest < ActiveSupport::TestCase
+  def setup
+    Pecorino.adapter = Pecorino::MemoryAdapter.new
+  end
+
   test "sets a block" do
     k = Base64.strict_encode64(Random.bytes(4))
     assert_nil Pecorino::Block.blocked_until(key: k)

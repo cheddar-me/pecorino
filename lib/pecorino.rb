@@ -76,4 +76,6 @@ module Pecorino
       raise "Pecorino does not support the #{adapter_name} database just yet"
     end
   end
+
+  @adapter = nil # Avoid "instance variable @adapter not initialized" warning on 2.7x
 end

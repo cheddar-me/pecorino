@@ -23,7 +23,7 @@ class Pecorino::Adapters::SqliteAdapter
     # The `level` of the bucket is what got stored at `last_touched_at` time, and we can
     # extrapolate from it to see how many tokens have leaked out since `last_touched_at` -
     # we don't need to UPDATE the value in the bucket here
-    sql = @model_class.sanitize_sql_array([<<~SQL, query_params])
+    sql = sanitize_sql_array([<<~SQL, query_params])
       SELECT
         MAX(
           0.0, MIN(
@@ -59,7 +59,7 @@ class Pecorino::Adapters::SqliteAdapter
       fillup: n_tokens.to_f
     }
 
-    sql = @model_class.sanitize_sql_array([<<~SQL, query_params])
+    sql = sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_leaky_buckets AS t
         (key, last_touched_at, may_be_deleted_after, level)
       VALUES
@@ -117,7 +117,7 @@ class Pecorino::Adapters::SqliteAdapter
     # Sadly with SQLite we need to do an INSERT first, because otherwise the inserted row is visible
     # to the WITH clause, so we cannot combine the initial fillup and the update into one statement.
     # This shuld be fine however since we will suppress the INSERT on a key conflict
-    insert_sql = @model_class.sanitize_sql_array([<<~SQL, query_params])
+    insert_sql = sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_leaky_buckets AS t
         (key, last_touched_at, may_be_deleted_after, level)
       VALUES
@@ -132,9 +132,9 @@ class Pecorino::Adapters::SqliteAdapter
       -- so that it can't be deleted between our INSERT and our UPDATE
         may_be_deleted_after = EXCLUDED.may_be_deleted_after
     SQL
-    @model_class.connection.execute(insert_sql)
+    with_connection {|c| c.execute(insert_sql) }
 
-    sql = @model_class.sanitize_sql_array([<<~SQL, query_params])
+    sql = sanitize_sql_array([<<~SQL, query_params])
       -- With SQLite MATERIALIZED has to be used so that level_post is calculated before the UPDATE takes effect
       WITH pre(level_post_with_uncapped_fillup, level_post) AS MATERIALIZED (
         SELECT
@@ -158,7 +158,7 @@ class Pecorino::Adapters::SqliteAdapter
         level AS level_after
     SQL
 
-    upserted = @model_class.connection.uncached { @model_class.connection.select_one(sql) }
+    upserted = with_connection {|c| c.select_one(sql) }
     level_after = upserted.fetch("level_after")
     level_before = upserted.fetch("level_before")
     [level_after, level_after >= capacity, level_after != level_before]
@@ -167,7 +167,7 @@ class Pecorino::Adapters::SqliteAdapter
   def set_block(key:, block_for:)
     raise ArgumentError, "block_for must be positive" unless block_for > 0
     query_params = {key: key.to_s, block_for: block_for.to_f, now_s: Time.now.to_f}
-    block_set_query = @model_class.sanitize_sql_array([<<~SQL, query_params])
+    block_set_query = sanitize_sql_array([<<~SQL, query_params])
       INSERT INTO pecorino_blocks AS t
         (key, blocked_until)
       VALUES
@@ -182,7 +182,7 @@ class Pecorino::Adapters::SqliteAdapter
 
   def blocked_until(key:)
     now_s = Time.now.to_f
-    block_check_query = @model_class.sanitize_sql_array([<<~SQL, {now_s: now_s, key: key}])
+    block_check_query = sanitize_sql_array([<<~SQL, {now_s: now_s, key: key}])
       SELECT
         blocked_until
       FROM
