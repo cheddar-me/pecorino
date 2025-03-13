@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The cached throttles can be used when you want to lift your throttle blocks into
 # a higher-level cache. If you are dealing with clients which are hammering on your
 # throttles a lot, it is useful to have a process-local cache of the timestamp when
