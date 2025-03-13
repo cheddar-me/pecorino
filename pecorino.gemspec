@@ -30,16 +30,14 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # Uncomment to register a new dependency of your gem
-  spec.add_dependency "activerecord", ">= 6"
-  spec.add_development_dependency "pg"
-  #spec.add_development_dependency "sqlite3"
-  spec.add_development_dependency "activesupport"
+  spec.add_development_dependency "activerecord", ">= 6"
+  spec.add_development_dependency "redis", "~> 5", "< 6"
+
   spec.add_development_dependency "rake"
   spec.add_development_dependency "minitest"
   spec.add_development_dependency "standard"
   spec.add_development_dependency "magic_frozen_string_literal"
   spec.add_development_dependency "minitest-fail-fast"
-  spec.add_development_dependency "redis", "~> 5", "< 6"
   spec.add_development_dependency "appraisal"
   # For more information and examples about making a new gem, checkout our
   # guide at: https://bundler.io/guides/creating_gem.html
