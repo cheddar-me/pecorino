@@ -31,11 +31,8 @@ Gem::Specification.new do |spec|
 
   # Uncomment to register a new dependency of your gem
   spec.add_dependency "activerecord", ">= 6"
-  spec.add_development_dependency "pg"
-  # Use SQLite for the _old_ Ruby version, since newer versions do not have appropriate
-  # platform-specific binary gems at the ready. For Ruby 3, you would otherwise need
-  # ">= 2". But it's zero effort for us to stay compatible, so why not?
-  spec.add_development_dependency "sqlite3", ">= 1.5.0", "< 1.6.0"
+  #spec.add_development_dependency "pg"
+  #spec.add_development_dependency "sqlite3"
   spec.add_development_dependency "activesupport"
   spec.add_development_dependency "rake"
   spec.add_development_dependency "minitest"
