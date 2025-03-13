@@ -31,7 +31,7 @@ Gem::Specification.new do |spec|
 
   # Uncomment to register a new dependency of your gem
   spec.add_dependency "activerecord", ">= 6"
-  #spec.add_development_dependency "pg"
+  spec.add_development_dependency "pg"
   #spec.add_development_dependency "sqlite3"
   spec.add_development_dependency "activesupport"
   spec.add_development_dependency "rake"
