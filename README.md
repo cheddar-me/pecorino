@@ -191,7 +191,6 @@ setup do
   # Delete all transient records
   ActiveRecord::Base.connection.execute("TRUNCATE TABLE pecorino_blocks")
   ActiveRecord::Base.connection.execute("TRUNCATE TABLE pecorino_leaky_buckets")
-  ActiveRecord::Base.connection.execute("TRUNCATE TABLE nonces")
 end
 ```
 
