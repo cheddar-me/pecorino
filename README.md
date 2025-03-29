@@ -182,6 +182,21 @@ We recommend running the following bit of code every couple of hours (via cron o
 Pecorino.prune!
 ```
 
+## Testing your application
+
+The Pecorino buckets and blocks are stateful. If you are not running tests with a transaction rollback, the rate limiters that got hit in a test case may interfere with other test cases you are running. Normally you will not notice this (if you are using the same database as the rest of your models), but we recommend adding this section to your global test case setup:
+
+```ruby
+setup do
+  # Delete all transient records
+  ActiveRecord::Base.connection.execute("TRUNCATE TABLE pecorino_blocks")
+  ActiveRecord::Base.connection.execute("TRUNCATE TABLE pecorino_leaky_buckets")
+  ActiveRecord::Base.connection.execute("TRUNCATE TABLE nonces")
+end
+```
+
+If you are using Redis, you may want to ensure it gets truncated/reset for every test case - or that parallel test case runners [each use a separate Redis database.](https://redis.io/docs/latest/commands/select/)
+
 ## Using cached throttles
 
 If a throttle is triggered, Pecorino sets a "block" record for that throttle key. Any request to that throttle will fail until the block is lifted. If you are getting hammered by requests which are getting throttled, it might be a good idea to install a caching layer which will respond with a "rate limit exceeded" error even before hitting your database - until the moment when the block would be lifted. You can use any [ActiveSupport::Cache::Store](https://api.rubyonrails.org/classes/ActiveSupport/Cache/Store.html) to store your blocks. If you have a fast Rails cache configured, create a wrapped throttle:
