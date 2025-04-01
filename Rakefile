@@ -20,6 +20,7 @@ end
 
 task :generate_typedefs do
   `bundle exec sord rbi/pecorino.rbi`
+  `bundle exec sord rbi/pecorino.rbs`
 end
 
 task default: [:test, :standard, :generate_typedefs]

@@ -15,6 +15,10 @@ class Pecorino::CachedThrottle
     @throttle = throttle
   end
 
+  # Increments the cached throttle by the given number of tokens. If there is currently a known cached block on that throttle
+  # an exception will be raised immediately instead of querying the actual throttle data. Otherwise the call gets forwarded
+  # to the underlying throttle.
+  #
   # @see Pecorino::Throttle#request!
   def request!(n = 1)
     blocked_state = read_cached_blocked_state
@@ -28,9 +32,9 @@ class Pecorino::CachedThrottle
     end
   end
 
-  # Returns cached `state` for the throttle if there is a currently active block for that throttle in the cache. Otherwise forwards to underlying throttle.
+  # Returns the cached `state` for the throttle if there is a currently active block for that throttle in the cache. Otherwise forwards to underlying throttle.
   #
-  # @see Pecorino::Throttle#request
+  # @see Pecorino::Throttle#request!
   def request(n = 1)
     blocked_state = read_cached_blocked_state
     return blocked_state if blocked_state&.blocked?

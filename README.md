@@ -31,7 +31,7 @@ Once the installation is done you can use Pecorino to start defining your thrott
 We call this pattern **prefix usage** - apply throttle before allowing the action to proceed. This is more secure than registering an action after it has taken place.
 
 ```ruby
-throttle = Pecorino::Throttle.new(key: "password-attempts-#{request.ip}", over_time: 1.minute, capacity: 5, block_for: 30.minutes)
+throttle = Pecorino::Throttle.new(key: "password-attempts-#{the_request.ip}", over_time: 1.minute, capacity: 5, block_for: 30.minutes)
 throttle.request!
 ```
 In a Rails controller you can then rescue from this exception to render the appropriate response:
@@ -119,11 +119,11 @@ class WalletController < ApplicationController
   end
 
   def withdraw
-     Wallet.transaction do
-       t = Pecorino::Throttle.new("wallet_#{current_user.id}_max_withdrawal", capacity: 200_00, over_time: 5.minutes)
-       t.request!(10_00)
-       current_user.wallet.withdraw(Money.new(10, "EUR"))
-     end
+    Wallet.transaction do
+      t = Pecorino::Throttle.new("wallet_#{current_user.id}_max_withdrawal", capacity: 200_00, over_time: 5.minutes)
+      t.request!(10_00)
+      current_user.wallet.withdraw(Money.new(10, "EUR"))
+    end
   end
 end
 ```
@@ -201,7 +201,7 @@ If you are using Redis, you may want to ensure it gets truncated/reset for every
 If a throttle is triggered, Pecorino sets a "block" record for that throttle key. Any request to that throttle will fail until the block is lifted. If you are getting hammered by requests which are getting throttled, it might be a good idea to install a caching layer which will respond with a "rate limit exceeded" error even before hitting your database - until the moment when the block would be lifted. You can use any [ActiveSupport::Cache::Store](https://api.rubyonrails.org/classes/ActiveSupport/Cache/Store.html) to store your blocks. If you have a fast Rails cache configured, create a wrapped throttle:
 
 ```ruby
-throttle = Pecorino::Throttle.new(key: "ip-#{request.ip}", capacity: 10, over_time: 2.seconds, block_for: 2.minutes)
+throttle = Pecorino::Throttle.new(key: "ip-#{the_request.ip}", capacity: 10, over_time: 2.seconds, block_for: 2.minutes)
 cached_throttle = Pecorino::CachedThrottle.new(Rails.cache, throttle)
 cached_throttle.request!
 ```
@@ -214,7 +214,7 @@ config.pecorino_throttle_cache = ActiveSupport::Cache::MemoryStore.new
 
 # in your controller
 
-throttle = Pecorino::Throttle.new(key: "ip-#{request.ip}", capacity: 10, over_time: 2.seconds, block_for: 2.minutes)
+throttle = Pecorino::Throttle.new(key: "ip-#{the_request.ip}", capacity: 10, over_time: 2.seconds, block_for: 2.minutes)
 cached_throttle = Pecorino::CachedThrottle.new(Rails.application.config.pecorino_throttle_cache, throttle)
 cached_throttle.request!
 ```
@@ -230,15 +230,16 @@ ActiveRecord::Base.connection.execute("ALTER TABLE pecorino_blocks SET UNLOGGED"
 
 ## Development
 
-After checking out the repo, set the Gemfile appropriate to your Ruby version and run Rake for tests, lint etc.
-Note that it is important to use the appropriate Gemfile per Ruby version and Rails version you want to test with. Due to some dependency shenanigans it is currently not very easy to have a single Gemfile.
+After checking out the repo, run `bundle install` and then do the thing you need to do.
+
+**Note:** CI runs other Gemfiles, because we can't test all Ruby versions and Rails versions just by swapping Gemfiles. If you need to debug something with a particular Ruby and Rails version, do this:
 
 ```bash
-$ rbenv local 2.7.7 && export BUNDLE_GEMFILE=gemfiles/Gemfile_ruby27_rails7 && bundle install
+$ bundle rbenv local 2.7.7 && export BUNDLE_GEMFILE=gemfiles/Gemfile_ruby27_rails7 && bundle install
 $ bundle exec rake
 ```
 
-Then proceed to develop as normal. CI will run both the oldest supported dependencies and newest supported dependencies. 
+Then proceed as normal. Make sure to unset `BUNDLE_GEMFILE` when you are done. CI will run both the oldest supported dependencies and newest supported dependencies. 
 
 ## Contributing
 

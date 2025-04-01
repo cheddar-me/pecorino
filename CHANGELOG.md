@@ -1,3 +1,7 @@
+## 0.7.3
+
+- Fix a number of YARD issues and generate both .rbi and .rbs typedefs
+
 ## 0.7.2
 
 - Set up a workable test harness for testing on both Rails 8 (Ruby 3.x) and Rails 7 (Ruby 2.x)

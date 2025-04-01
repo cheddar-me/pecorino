@@ -60,9 +60,9 @@ module Pecorino
 
   # Returns the database implementation for setting the values atomically. Since the implementation
   # differs per database, this method will return a different adapter depending on which database is
-  # being used
+  # being used.
   #
-  # @param adapter[Pecorino::Adapters::BaseAdapter]
+  # @return [Pecorino::Adapters::BaseAdapter]
   def self.default_adapter_from_main_database
     model_class = ActiveRecord::Base
     adapter_name = model_class.connection.adapter_name
