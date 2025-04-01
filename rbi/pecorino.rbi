@@ -1,6 +1,6 @@
 # typed: strong
 module Pecorino
-  VERSION = T.let("0.7.2", T.untyped)
+  VERSION = T.let("0.7.3", T.untyped)
 
   # Deletes stale leaky buckets and blocks which have expired. Run this method regularly to
   # avoid accumulating too many unused rows in your tables.
