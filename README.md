@@ -230,9 +230,15 @@ ActiveRecord::Base.connection.execute("ALTER TABLE pecorino_blocks SET UNLOGGED"
 
 ## Development
 
-After checking out the repo, run `bundle`. Then, run `rake test` to run the tests.
+After checking out the repo, set the Gemfile appropriate to your Ruby version and run Rake for tests, lint etc.
+Note that it is important to use the appropriate Gemfile per Ruby version and Rails version you want to test with. Due to some dependency shenanigans it is currently not very easy to have a single Gemfile.
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+```bash
+$ rbenv local 2.7.7 && export BUNDLE_GEMFILE=gemfiles/Gemfile_ruby27_rails7 && bundle install
+$ bundle exec rake
+```
+
+Then proceed to develop as normal. CI will run both the oldest supported dependencies and newest supported dependencies. 
 
 ## Contributing
 

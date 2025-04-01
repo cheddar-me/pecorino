@@ -1,3 +1,7 @@
+## 0.7.2
+
+- Set up a workable test harness for testing on both Rails 8 (Ruby 3.x) and Rails 7 (Ruby 2.x)
+
 ## 0.7.1
 
 - Release dependency constraint to permit Rails 8 (not thoroughly validated yet)
