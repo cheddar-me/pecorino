@@ -91,7 +91,7 @@ class Pecorino::Throttle
 
   # The key for that throttle. Each key defines a unique throttle based on either a given name or
   # discriminators. If there is a component you want to key your throttle by, include it in the
-  # `key` keyword argument to the constructor, like `"t-ip-#{request.ip}"`
+  # `key` keyword argument to the constructor, like `"t-ip-#{your_rails_request.ip}"`
   #
   # @return [String]
   attr_reader :key
@@ -100,8 +100,8 @@ class Pecorino::Throttle
   # @param block_for[Numeric] the number of seconds to block any further requests for. Defaults to time it takes
   #   the bucket to leak out to the level of 0
   # @param adapter[Pecorino::Adapters::BaseAdapter] a compatible adapter
-  # @param leaky_bucket_options Options for `Pecorino::LeakyBucket.new`
-  # @see PecorinoLeakyBucket.new
+  # @param leaky_bucket_options Options for {Pecorino::LeakyBucket.new}
+  # @see Pecorino::LeakyBucket.new
   def initialize(key:, block_for: nil, adapter: Pecorino.adapter, **leaky_bucket_options)
     @adapter = adapter
     leaky_bucket_options.delete(:adapter)
@@ -129,16 +129,16 @@ class Pecorino::Throttle
   # The exception can be rescued later to provide a 429 response. This method is better
   # to use before performing the unit of work that the throttle is guarding:
   #
+  # If the method call returns it means that the request is not getting throttled.
+  #
   # @example
   #   begin
-  #      t.request!
-  #      Note.create!(note_params)
+  #     t.request!
+  #     Note.create!(note_params)
   #   rescue Pecorino::Throttle::Throttled => e
-  #      [429, {"Retry-After" => e.retry_after.to_s}, []]
+  #     [429, {"Retry-After" => e.retry_after.to_s}, []]
   #   end
-  #
-  # If the method call succeeds it means that the request is not getting throttled.
-  #
+  # @param n [Numeric] how many tokens to place into the bucket or remove from the bucket. May be fractional or negative.
   # @return [State] the state of the throttle after filling up the leaky bucket / trying to pass the block
   def request!(n = 1)
     request(n).tap do |state_after|
@@ -156,8 +156,8 @@ class Pecorino::Throttle
   #     Entry.create!(entry_params)
   #     t.request
   #   end
-  #
-  # @return [State] the state of the throttle after filling up the leaky bucket / trying to pass the block
+  # @param n [Numeric] how many tokens to place into the bucket or remove from the bucket. May be fractional or negative.
+  # @return [State] the state of the throttle after the attempt to fill up the leaky bucket
   def request(n = 1)
     existing_blocked_until = Pecorino::Block.blocked_until(key: @key, adapter: @adapter)
     return State.new(existing_blocked_until.utc) if existing_blocked_until
@@ -181,6 +181,7 @@ class Pecorino::Throttle
   # @example
   #   t.throttled { Slack.alert("Things are going wrong") }
   #
+  # @param blk The block to run. Will only run if the throttle accepts the call.
   # @return [Object] the return value of the block if the block gets executed, or `nil` if the call got throttled
   def throttled(&blk)
     return if request(1).blocked?
