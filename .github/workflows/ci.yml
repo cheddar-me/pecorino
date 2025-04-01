@@ -9,7 +9,6 @@ env:
   PGHOST: localhost
   PGUSER: postgres
   PGPASSWORD: postgres
-  TESTOPTS: "--fail-fast"
   BUNDLE_PATH: vendor/bundle
 
 jobs:
