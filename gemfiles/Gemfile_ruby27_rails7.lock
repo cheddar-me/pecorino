@@ -1,5 +1,5 @@
 PATH
-  remote: .
+  remote: ..
   specs:
     pecorino (0.7.1)
       activerecord (>= 7)

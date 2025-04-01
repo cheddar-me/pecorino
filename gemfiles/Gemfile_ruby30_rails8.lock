@@ -1,5 +1,5 @@
 PATH
-  remote: .
+  remote: ..
   specs:
     pecorino (0.7.1)
       activerecord (>= 7)
@@ -30,28 +30,19 @@ GEM
     base64 (0.2.0)
     benchmark (0.4.0)
     bigdecimal (3.1.9)
-    commander (5.0.0)
-      highline (~> 3.0.0)
     concurrent-ruby (1.3.5)
     connection_pool (2.5.0)
     drb (2.2.1)
-    highline (3.0.1)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
     json (2.10.2)
     language_server-protocol (3.17.0.4)
     lint_roller (1.1.0)
     logger (1.7.0)
-    magic_frozen_string_literal (1.2.0)
     minitest (5.25.5)
     minitest-fail-fast (0.1.0)
       minitest (~> 5)
     parallel (1.26.3)
-    parlour (9.1.0)
-      commander (~> 5.0)
-      parser
-      rainbow (~> 3.0)
-      sorbet-runtime (>= 0.5)
     parser (3.3.7.4)
       ast (~> 2.4.1)
       racc
@@ -60,8 +51,6 @@ GEM
     racc (1.8.1)
     rainbow (3.1.1)
     rake (13.2.1)
-    rbs (3.9.2)
-      logger
     redis (5.4.0)
       redis-client (>= 0.22.0)
     redis-client (0.24.0)
@@ -87,14 +76,6 @@ GEM
       rubocop-ast (>= 1.38.0, < 2.0)
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
-    sorbet-runtime (0.5.11971)
-    sord (7.0.0)
-      commander (~> 5.0)
-      parlour (~> 9.1)
-      parser
-      rbs (~> 3.0)
-      sorbet-runtime
-      yard
     sqlite3 (2.6.0-aarch64-linux-gnu)
     sqlite3 (2.6.0-aarch64-linux-musl)
     sqlite3 (2.6.0-arm-linux-gnu)
@@ -140,14 +121,12 @@ PLATFORMS
 
 DEPENDENCIES
   activesupport (>= 8)
-  magic_frozen_string_literal
   minitest (~> 5.0)
   minitest-fail-fast
   pecorino!
   pg
   rake (~> 13.0)
   redis (~> 5, < 6)
-  sord
   sqlite3
   standard
   yard
