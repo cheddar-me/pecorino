@@ -7,4 +7,5 @@
 /spec/reports/
 /tmp/
 Gemfile.lock
+gemfiles/*.lock
 .ruby-version

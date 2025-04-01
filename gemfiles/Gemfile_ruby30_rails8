@@ -10,7 +10,6 @@ gem "sqlite3"
 gem "activesupport", ">= 8"
 gem "rake", "~> 13.0"
 gem "minitest", "~> 5.0"
-gem "minitest-fail-fast"
 gem "redis", "~> 5", "< 6"
 gem "yard" # Not used under this Ruby version but the Rakefile includes it
 gem "standard" # Not used but the Rakefile includes it
