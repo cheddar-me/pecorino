@@ -35,6 +35,8 @@ jobs:
     name: "Tests"
     runs-on: ubuntu-latest
     strategy:
+      strategy:
+        fail-fast: false # We want both to run to completion
       matrix:
         gemfile_and_ruby:
           - ["/gemfiles/Gemfile_ruby27_rails7", "2.7.7"]
