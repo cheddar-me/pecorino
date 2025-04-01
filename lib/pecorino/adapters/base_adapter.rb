@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # An adapter allows Pecorino throttles, leaky buckets and other
-# resources to interfact to a data storage backend - a database, usually.
+# resources to interface with a data storage backend - a database, usually.
 class Pecorino::Adapters::BaseAdapter
   # Returns the state of a leaky bucket. The state should be a tuple of two
   # values: the current level (Float) and whether the bucket is now at capacity (Boolean)

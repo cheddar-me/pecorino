@@ -1,21 +1,46 @@
 name: CI
 
 on:
-  - push
+  pull_request:
+  push:
+    branches: [ main ]
 
 env:
+  PGHOST: localhost
+  PGUSER: postgres
+  PGPASSWORD: postgres
   BUNDLE_PATH: vendor/bundle
 
 jobs:
+  lint:
+    name: "Lint"
+    runs-on: ubuntu-latest
+    env:
+      BUNDLE_GEMFILE: ${{ github.workspace }}/gemfiles/Gemfile_ruby27_rails7 # Linting should always align with the minimum Ruby version
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7.7
+          bundler-cache: true
+
+      - name: Lint code for consistent style
+        run: bundle exec standardrb
+
   test:
-    name: Tests
-    runs-on: ubuntu-22.04
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    name: "Tests"
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false # We want both to run to completion
       matrix:
-        ruby:
-          - '2.7'
-          - '3.2'
+        gemfile_and_ruby:
+          - ["/gemfiles/Gemfile_ruby27_rails7", "2.7.7"]
+          - ["/gemfiles/Gemfile_ruby30_rails8", "3.2.2"]
+    env:
+      BUNDLE_GEMFILE: ${{ github.workspace }}/${{ matrix.gemfile_and_ruby[0] }}
     services:
       postgres:
         image: postgres
@@ -30,19 +55,17 @@ jobs:
         ports:
           - 6379:6379
     steps:
-      - name: Checkout
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y curl libjemalloc2 sqlite3
+
+      - name: Checkout code
         uses: actions/checkout@v4
-      - name: Setup Ruby
+
+      - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ${{ matrix.ruby }}
+          ruby-version:  ${{ matrix.gemfile_and_ruby[1] }}
           bundler-cache: true
-      - name: "Tests and Lint"
-        run: bundle exec rake
-        env:
-          PGHOST: localhost
-          PGUSER: postgres
-          PGPASSWORD: postgres
-          TESTOPTS: "--fail-fast"
-        #   MYSQL_HOST: 127.0.0.1
-        #   MYSQL_PORT: 3306
+
+      - name: Run tests
+        run: bundle exec rake test
