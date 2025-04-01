@@ -15,6 +15,6 @@ gem "minitest", "~> 5.0"
 gem "minitest-fail-fast"
 gem "redis", "~> 5", "< 6"
 gem "yard"
-gem "standard"
+gem "standard", "1.28.5" # Very specific version of standard for 2.6 with _known_ settings
 gem "magic_frozen_string_literal"
 gem "sord"
