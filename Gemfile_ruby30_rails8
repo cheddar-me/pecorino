@@ -1,0 +1,20 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+ruby ">= 3.0"
+
+# Specify your gem's dependencies in pecorino.gemspec
+gemspec
+
+gem "pg"
+gem "sqlite3"
+gem "activesupport", ">= 8"
+gem "rake", "~> 13.0"
+gem "minitest", "~> 5.0"
+gem "minitest-fail-fast"
+gem "redis", "~> 5", "< 6"
+gem "yard"
+gem "standard"
+gem "magic_frozen_string_literal"
+gem "sord"
