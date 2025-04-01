@@ -17,7 +17,7 @@ jobs:
     name: "Lint"
     runs-on: ubuntu-latest
     env:
-      BUNDLE_GEMFILE: ${{ github.workspace }}/Gemfile_ruby27_rails7 # Linting should always align with the minimum Ruby version
+      BUNDLE_GEMFILE: ${{ github.workspace }}/gemfiles/Gemfile_ruby27_rails7 # Linting should always align with the minimum Ruby version
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,8 +37,8 @@ jobs:
     strategy:
       matrix:
         gemfile_and_ruby:
-          - ["/Gemfile_ruby27_rails7", "2.7.7"]
-          - ["/Gemfile_ruby30_rails8", "3.2.2"]
+          - ["/gemfiles/Gemfile_ruby27_rails7", "2.7.7"]
+          - ["/gemfiles/Gemfile_ruby30_rails8", "3.2.2"]
     env:
       BUNDLE_GEMFILE: ${{ github.workspace }}/${{ matrix.gemfile_and_ruby[0] }}
     services:
