@@ -3,6 +3,9 @@
 require "bundler/gem_tasks"
 require "rake/testtask"
 require "standard/rake"
+require "yard"
+
+YARD::Rake::YardocTask.new(:doc)
 
 Rake::TestTask.new(:test) do |t|
   t.libs << "test"
@@ -15,4 +18,12 @@ task :format do
   `bundle exec magic_frozen_string_literal .`
 end
 
-task default: [:test, :standard]
+task :generate_typedefs do
+  `bundle exec sord rbi/pecorino.rbi`
+end
+
+task default: [:test, :standard, :generate_typedefs]
+
+# When building the gem, generate typedefs beforehand,
+# so that they get included
+Rake::Task["build"].enhance(["generate_typedefs"])
