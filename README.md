@@ -189,8 +189,10 @@ The Pecorino buckets and blocks are stateful. If you are not running tests with 
 ```ruby
 setup do
   # Delete all transient records
-  ActiveRecord::Base.connection.execute("TRUNCATE TABLE pecorino_blocks")
-  ActiveRecord::Base.connection.execute("TRUNCATE TABLE pecorino_leaky_buckets")
+  ActiveRecord::Base.with_connection do |connection|
+    connection.execute("TRUNCATE TABLE pecorino_blocks")
+    connection.execute("TRUNCATE TABLE pecorino_leaky_buckets")
+  end
 end
 ```
 
@@ -224,8 +226,10 @@ cached_throttle.request!
 Throttles and leaky buckets are transient resources. If you are using Postgres replication, it might be prudent to set the Pecorino tables to `UNLOGGED` which will exclude them from replication - and save you bandwidth and storage on your RR. To do so, add the following statements to your migration:
 
 ```ruby
-ActiveRecord::Base.connection.execute("ALTER TABLE pecorino_leaky_buckets SET UNLOGGED")
-ActiveRecord::Base.connection.execute("ALTER TABLE pecorino_blocks SET UNLOGGED")
+ActiveRecord::Base.with_connection do |connection|
+  connection.execute("ALTER TABLE pecorino_leaky_buckets SET UNLOGGED")
+  connection.execute("ALTER TABLE pecorino_blocks SET UNLOGGED")
+end
 ```
 
 ## Development
