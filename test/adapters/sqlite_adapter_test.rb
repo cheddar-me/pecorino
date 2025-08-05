@@ -33,7 +33,7 @@ class SqliteAdapterTest < ActiveSupport::TestCase
 
   def test_create_tables
     ActiveRecord::Base.transaction do
-      ActiveRecord::Base.with_connection do |connection|
+      ActiveRecord::Base.connection_pool.with_connection do |connection|
         connection.execute("DROP TABLE pecorino_leaky_buckets")
         connection.execute("DROP TABLE pecorino_blocks")
       end
