@@ -66,12 +66,7 @@ module Pecorino
   def self.default_adapter_from_main_database
     model_class = ActiveRecord::Base
     
-    begin
-      adapter_name = model_class.connection_pool.with_connection(&:adapter_name)
-    rescue ActiveRecord::ConnectionNotEstablished
-      # If no connection is established, default to SQLite for development/test
-      adapter_name = "sqlite3"
-    end
+    adapter_name = ActiveRecord::Base.connection_db_config.adapter
     
     case adapter_name
     when /postgres/i
