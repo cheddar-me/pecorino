@@ -5,6 +5,11 @@ require "test_helper"
 class LeakyBucketTest < ActiveSupport::TestCase
   def memory_adapter
     @adapter ||= Pecorino::Adapters::MemoryAdapter.new
+
+    # Create the Pecorino tables
+    ActiveRecord::Schema.define(version: 1) do |via_definer|
+      Pecorino.create_tables(via_definer)
+    end
   end
 
   # This test is performed multiple times since time is involved, and there can be fluctuations
