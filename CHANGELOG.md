@@ -1,3 +1,7 @@
+## 0.7.4
+
+- Ensure deprecated ActiveRecord::Base.connection is replaced with ActiveRecord::Base.connection_pool.with_connection. This prevents permanent connection checkout
+
 ## 0.7.3
 
 - Fix a number of YARD issues and generate both .rbi and .rbs typedefs
