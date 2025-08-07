@@ -4,7 +4,7 @@ require "test_helper"
 require "base64"
 
 class BlockTest < ActiveSupport::TestCase
-  def setup
+  def memory_adapter
     @adapter = Pecorino::Adapters::MemoryAdapter.new
   end
 
