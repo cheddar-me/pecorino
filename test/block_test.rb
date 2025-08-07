@@ -5,16 +5,7 @@ require "base64"
 
 class BlockTest < ActiveSupport::TestCase
   def setup
-    # Set up a minimal in-memory SQLite database for Block tests
-    ActiveRecord::Base.establish_connection(
-      adapter: "sqlite3",
-      database: ":memory:"
-    )
-
-    # Create the Pecorino tables
-    ActiveRecord::Schema.define(version: 1) do |via_definer|
-      Pecorino.create_tables(via_definer)
-    end
+    Pecorino.adapter = Pecorino::Adapters::MemoryAdapter.new
   end
 
   test "sets a block" do

@@ -65,7 +65,7 @@ module Pecorino
   # @return [Pecorino::Adapters::BaseAdapter]
   def self.default_adapter_from_main_database
     model_class = ActiveRecord::Base
-    adapter_name = model_class.connection.adapter_name
+    adapter_name = model_class.connection_pool.with_connection(&:adapter_name)
     case adapter_name
     when /postgres/i
       Pecorino::Adapters::PostgresAdapter.new(model_class)
